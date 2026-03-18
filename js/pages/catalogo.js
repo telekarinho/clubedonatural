@@ -73,5 +73,53 @@ document.addEventListener('DOMContentLoaded', () => {
   AppState.restore();
   Toast.init();
   Cart.init();
+
+  // === Hamburger Menu Toggle ===
+  const hamburgerBtn = document.getElementById('btn-hamburger');
+  const mainNav = document.getElementById('main-nav');
+  if (hamburgerBtn && mainNav) {
+    hamburgerBtn.addEventListener('click', () => {
+      const isOpen = mainNav.classList.toggle('open');
+      hamburgerBtn.textContent = isOpen ? '\u2715' : '\u2630';
+      hamburgerBtn.setAttribute('aria-expanded', isOpen);
+    });
+    mainNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mainNav.classList.remove('open');
+        hamburgerBtn.textContent = '\u2630';
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+    document.addEventListener('click', (e) => {
+      if (!mainNav.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+        mainNav.classList.remove('open');
+        hamburgerBtn.textContent = '\u2630';
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // LGPD Cookie Banner
+  if (!Storage.getConsent()) {
+    const banner = document.getElementById('cookie-banner');
+    if (banner) banner.classList.add('active');
+  }
+  const acceptCookies = document.getElementById('cookie-accept');
+  if (acceptCookies) {
+    acceptCookies.addEventListener('click', () => {
+      Storage.setConsent({ analytics: true, marketing: true });
+      const b = document.getElementById('cookie-banner');
+      if (b) b.classList.remove('active');
+    });
+  }
+  const rejectCookies = document.getElementById('cookie-reject');
+  if (rejectCookies) {
+    rejectCookies.addEventListener('click', () => {
+      Storage.setConsent({ analytics: false, marketing: false });
+      const b = document.getElementById('cookie-banner');
+      if (b) b.classList.remove('active');
+    });
+  }
+
   CatalogoPage.init();
 });

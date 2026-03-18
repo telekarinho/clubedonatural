@@ -89,6 +89,11 @@
   margin-bottom: var(--space-4);
 }
 
+@media (max-width: 480px) {
+  .checkout-section { padding: var(--space-4); }
+  .checkout-section__title { font-size: var(--fs-base); }
+}
+
 .checkout-section__title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
@@ -146,6 +151,8 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   margin-bottom: var(--space-5);
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .geolocation-btn:hover {
@@ -272,7 +279,7 @@
   align-items: center;
   gap: var(--space-1);
   margin-top: var(--space-3);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
   background: #25D366;
   color: var(--branco);
   border-radius: var(--radius-full);
@@ -280,6 +287,8 @@
   font-weight: var(--fw-semibold);
   text-decoration: none;
   transition: background var(--transition-fast);
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .store-card__whatsapp:hover {
@@ -297,13 +306,20 @@
 .radio-card {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-5);
+  gap: var(--space-3);
+  padding: var(--space-4);
   border: 2px solid var(--cinza-200);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 480px) {
+  .radio-card { padding: var(--space-3); }
+  .pix-area { padding: var(--space-3); }
+  .pix-qr-placeholder { width: 160px; height: 160px; font-size: 2.5rem; }
 }
 
 .radio-card:hover {
@@ -506,6 +522,8 @@
   font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: background var(--transition-fast);
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .pix-copy-btn:hover {
@@ -767,6 +785,9 @@
   font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-height: 48px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checkout-nav .btn-back:hover {
@@ -786,6 +807,8 @@
   font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checkout-nav .btn-next:hover {
@@ -811,6 +834,8 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-md);
+  min-height: 52px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checkout-nav .btn-confirm:hover {
@@ -872,6 +897,14 @@
   color: var(--cinza-600);
   margin-top: var(--space-3);
   line-height: var(--lh-relaxed);
+}
+
+/* === CHECKOUT HEADER MOBILE === */
+@media (max-width: 480px) {
+  #btn-back-catalog {
+    font-size: var(--fs-xs);
+    padding: var(--space-2);
+  }
 }
 
 /* === MOBILE SPACING FOR FIXED SUMMARY === */

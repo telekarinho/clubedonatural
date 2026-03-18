@@ -68,13 +68,14 @@
 .btn-sm {
   padding: var(--space-2) var(--space-3);
   font-size: var(--fs-xs);
+  min-height: 44px;
 }
 
 .btn-full { width: 100%; }
 
 .btn-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: var(--radius-full);
 }
@@ -213,8 +214,8 @@
 .modal-header h3 { margin: 0; }
 
 .modal-close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,6 +223,7 @@
   font-size: var(--fs-lg);
   color: var(--cinza-500);
   transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .modal-close:hover { background: var(--cinza-100); color: var(--cinza-800); }
@@ -304,6 +306,18 @@
   border-left: 4px solid var(--verde-medio);
 }
 
+@media (max-width: 480px) {
+  .toast-container {
+    left: var(--space-3);
+    right: var(--space-3);
+  }
+  .toast {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
 .toast.success { border-left-color: var(--verde-claro); }
 .toast.error { border-left-color: var(--vermelho); }
 .toast.warning { border-left-color: var(--amarelo); }
@@ -342,7 +356,15 @@
 }
 
 .cookie-banner-text { flex: 1; font-size: var(--fs-sm); color: var(--cinza-700); min-width: 200px; }
-.cookie-banner-actions { display: flex; gap: var(--space-2); }
+.cookie-banner-actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .cookie-banner { padding: var(--space-3) var(--space-4); }
+  .cookie-banner-content { flex-direction: column; gap: var(--space-3); }
+  .cookie-banner-text { min-width: 0; font-size: var(--fs-xs); }
+  .cookie-banner-actions { width: 100%; }
+  .cookie-banner-actions .btn { flex: 1; min-height: 44px; justify-content: center; }
+}
 
 /* === STEPPER (Checkout) === */
 .stepper {
@@ -515,14 +537,15 @@
 }
 
 .qty-control button {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--fs-lg);
   color: var(--verde-medio);
   transition: background var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .qty-control button:hover { background: var(--cinza-100); }

@@ -11,6 +11,35 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init cart on all pages
   Cart.init();
 
+  // === Hamburger Menu Toggle ===
+  const hamburgerBtn = document.getElementById('btn-hamburger');
+  const mainNav = document.getElementById('main-nav');
+  if (hamburgerBtn && mainNav) {
+    hamburgerBtn.addEventListener('click', () => {
+      const isOpen = mainNav.classList.toggle('open');
+      hamburgerBtn.textContent = isOpen ? '✕' : '☰';
+      hamburgerBtn.setAttribute('aria-expanded', isOpen);
+    });
+
+    // Close menu when clicking a link
+    mainNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mainNav.classList.remove('open');
+        hamburgerBtn.textContent = '☰';
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!mainNav.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+        mainNav.classList.remove('open');
+        hamburgerBtn.textContent = '☰';
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
   // LGPD Cookie Banner
   if (!Storage.getConsent()) {
     const banner = document.getElementById('cookie-banner');

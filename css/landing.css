@@ -389,7 +389,14 @@
 }
 
 @media (max-width: 768px) {
-  .benefits-grid { grid-template-columns: 1fr; gap: var(--space-4); }
+  .benefits-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+  .benefit-card { padding: var(--space-4); }
+  .benefit-icon { width: 52px; height: 52px; font-size: 22px; }
+}
+
+@media (max-width: 480px) {
+  .benefits-grid { grid-template-columns: 1fr; gap: var(--space-3); }
+  .benefit-card { padding: var(--space-3); }
 }
 
 /* === RECORRÊNCIA CTA === */

@@ -244,14 +244,32 @@
   right: 0;
   background: var(--branco);
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   z-index: var(--z-modal);
   transform: translateY(100%);
-  transition: transform var(--transition-base) ease;
+  transition: transform var(--transition-slow) ease;
 }
 
 .bottom-sheet.active { transform: translateY(0); }
+
+/* Desktop: side panel */
+@media (min-width: 768px) {
+  .bottom-sheet {
+    top: 0;
+    left: auto;
+    right: 0;
+    bottom: 0;
+    max-width: 520px;
+    max-height: 100vh;
+    border-radius: var(--radius-2xl) 0 0 var(--radius-2xl);
+    transform: translateX(100%);
+  }
+  .bottom-sheet.active { transform: translateX(0); }
+  .bottom-sheet .bottom-sheet-handle { display: none; }
+}
 
 .bottom-sheet-handle {
   width: 40px;

@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   AppState.restore();
   Toast.init();
 
-  // Init cart badge on all pages
+  // Init cart on all pages
   Cart.init();
 
   // LGPD Cookie Banner
@@ -50,8 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-
-    // Show install button after 10 seconds
     setTimeout(() => {
       const installBtn = document.getElementById('pwa-install-btn');
       if (installBtn) {
@@ -60,9 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (deferredPrompt) {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-              Toast.success('App instalado com sucesso!');
-            }
+            if (outcome === 'accepted') Toast.success('App instalado com sucesso!');
             deferredPrompt = null;
             installBtn.style.display = 'none';
           }
@@ -73,8 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Register Service Worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // SW registration failed, likely running locally without HTTPS
-    });
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 });

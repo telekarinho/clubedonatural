@@ -159,14 +159,16 @@
 .hero .btn-primary:hover { background: var(--terra); }
 
 .hero .btn-secondary {
-  border-color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.6);
   color: var(--branco);
   padding: var(--space-4) var(--space-8);
   font-size: var(--fs-md);
   border-radius: var(--radius-xl);
+  backdrop-filter: blur(4px);
 }
 
-.hero .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+.hero .btn-secondary:hover { background: rgba(255,255,255,0.25); }
 
 @media (max-width: 480px) {
   .hero { padding: var(--space-10) var(--space-4); }

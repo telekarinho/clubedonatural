@@ -1,5 +1,6 @@
 /* ============================================
    CLUBE DO NATURAL — Product Detail (Bottom Sheet)
+   Uses bottom-sheet classes from components.css
    ============================================ */
 
 const ProductDetail = {
@@ -42,51 +43,61 @@ const ProductDetail = {
 
     // Selos
     const selosHTML = p.selos.map(selo =>
-      `<span class="badge badge-${selo}">${Utils.seloIcon(selo)} ${Utils.seloLabel(selo)}</span>`
+      `<span class="badge badge-${selo}" style="font-size:var(--fs-xs);">${Utils.seloIcon(selo)} ${Utils.seloLabel(selo)}</span>`
     ).join('');
 
-    // Variações
+    // Variations
     const variacoesHTML = p.variacoes.map((v, i) => `
-      <button class="detail-variation ${i === 0 ? 'active' : ''}" data-index="${i}">
-        <span class="detail-variation-weight">${v.peso}</span>
-        <span class="detail-variation-price">${Utils.formatBRL(v.preco)}</span>
+      <button class="detail-variation ${i === 0 ? 'active' : ''}" data-index="${i}"
+        style="padding:var(--space-2) var(--space-3);border:2px solid ${i===0?'var(--verde-medio)':'var(--cinza-300)'};border-radius:var(--radius-md);background:${i===0?'var(--verde-medio)':'var(--branco)'};color:${i===0?'var(--branco)':'var(--cinza-700)'};cursor:pointer;font-family:inherit;transition:all 150ms ease;">
+        <span style="display:block;font-size:var(--fs-xs);font-weight:var(--fw-semibold);">${v.peso}</span>
+        <span style="display:block;font-size:var(--fs-sm);font-weight:var(--fw-bold);">${Utils.formatBRL(v.preco)}</span>
       </button>
     `).join('');
 
-    // Benefícios
+    // Benefits
     const beneficiosHTML = p.beneficios ? p.beneficios.map(b =>
-      `<li>✅ ${b}</li>`
+      `<li style="padding:var(--space-2) 0;border-bottom:1px solid var(--cinza-100);font-size:var(--fs-sm);color:var(--cinza-700);">
+        <span style="color:var(--verde-claro);font-weight:var(--fw-bold);margin-right:var(--space-2);">✓</span>${b}
+      </li>`
     ).join('') : '';
 
-    // Como usar
+    // How to use
     const comoUsarHTML = p.comoUsar ? p.comoUsar.map(c =>
-      `<li>👉 ${c}</li>`
+      `<li style="padding:var(--space-2) 0;border-bottom:1px solid var(--cinza-100);font-size:var(--fs-sm);color:var(--cinza-700);">
+        <span style="margin-right:var(--space-2);">👉</span>${c}
+      </li>`
     ).join('') : '';
 
     // Combina com
     const combinaHTML = p.combinaCom ? p.combinaCom.map(id => {
       const related = DataProducts.find(pr => pr.id === id);
       if (!related) return '';
-      return `<a href="#" class="detail-related-item" data-id="${id}">${related.nome}</a>`;
+      return `
+        <div class="detail-related-item" data-id="${id}" style="flex-shrink:0;width:100px;text-align:center;cursor:pointer;">
+          <div style="width:100%;aspect-ratio:1;border-radius:var(--radius-md);background:linear-gradient(135deg,#a8e6cf,#88d8a8);margin-bottom:var(--space-1);"></div>
+          <span style="font-size:var(--fs-xs);color:var(--cinza-700);display:block;">${related.nome}</span>
+        </div>
+      `;
     }).filter(Boolean).join('') : '';
 
-    // Info nutricional
+    // Nutritional info
     let nutricionalHTML = '';
     if (p.infoNutricional) {
       const info = p.infoNutricional;
       nutricionalHTML = `
-        <table class="detail-nutrition-table">
-          <tr><td>Porção</td><td>${info.porcao}</td></tr>
-          <tr><td>Calorias</td><td>${info.calorias} kcal</td></tr>
-          <tr><td>Proteínas</td><td>${info.proteinas}</td></tr>
-          <tr><td>Gorduras</td><td>${info.gorduras}</td></tr>
-          <tr><td>Carboidratos</td><td>${info.carboidratos}</td></tr>
-          <tr><td>Fibras</td><td>${info.fibras}</td></tr>
+        <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);">
+          <tr style="background:var(--cinza-100);"><td style="padding:var(--space-2) var(--space-3);font-weight:var(--fw-semibold);">Porção</td><td style="padding:var(--space-2) var(--space-3);">${info.porcao}</td></tr>
+          <tr><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">Calorias</td><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">${info.calorias} kcal</td></tr>
+          <tr><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">Proteínas</td><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">${info.proteinas}</td></tr>
+          <tr><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">Gorduras</td><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">${info.gorduras}</td></tr>
+          <tr><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">Carboidratos</td><td style="padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--cinza-200);">${info.carboidratos}</td></tr>
+          <tr><td style="padding:var(--space-2) var(--space-3);">Fibras</td><td style="padding:var(--space-2) var(--space-3);">${info.fibras}</td></tr>
         </table>
       `;
     }
 
-    // Recorrência
+    // Recurrence box
     let recurrenceHTML = '';
     if (hasRecurrence) {
       const savings = Utils.calcSubscriptionSavings(
@@ -95,10 +106,10 @@ const ProductDetail = {
         p.recorrencia.frequenciaSugerida
       );
       recurrenceHTML = `
-        <div class="recurrence-box">
+        <div class="recurrence-box" style="margin:var(--space-4) 0;">
           <div class="recurrence-title">🔄 Assine e Economize</div>
-          <p style="font-size: var(--fs-sm); margin-bottom: var(--space-3);">${p.recorrencia.fraseVenda}</p>
-          <div style="display:flex;gap:var(--space-4);margin-bottom:var(--space-3);">
+          <p style="font-size:var(--fs-sm);margin-bottom:var(--space-3);color:var(--cinza-700);">${p.recorrencia.fraseVenda}</p>
+          <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-3);">
             <div style="flex:1;text-align:center;padding:var(--space-3);background:var(--cinza-100);border-radius:var(--radius-md);">
               <div style="font-size:var(--fs-xs);color:var(--cinza-600);">Avulso</div>
               <div style="font-size:var(--fs-lg);font-weight:700;">${Utils.formatBRL(this.selectedVariacao.preco)}</div>
@@ -108,25 +119,26 @@ const ProductDetail = {
               <div style="font-size:var(--fs-lg);font-weight:700;color:var(--verde-escuro);">${Utils.formatBRL(savings.precoAssinatura)}</div>
             </div>
           </div>
-          <div class="recurrence-savings">
-            Economize ${Utils.formatBRL(savings.economiaAnual)}/ano (${savings.comprasAno} entregas)
+          <div class="recurrence-savings" style="text-align:center;margin-bottom:var(--space-3);">
+            💰 Economize ${Utils.formatBRL(savings.economiaAnual)}/ano (${savings.comprasAno} entregas)
           </div>
-          <div style="margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap;">
-            <button class="detail-freq-btn ${this.selectedFrequency === 7 ? 'active' : ''}" data-freq="7">Semanal</button>
-            <button class="detail-freq-btn ${this.selectedFrequency === 14 ? 'active' : ''}" data-freq="14">Quinzenal</button>
-            <button class="detail-freq-btn ${this.selectedFrequency === 30 ? 'active' : ''}" data-freq="30">Mensal</button>
-            <button class="detail-freq-btn ${this.selectedFrequency === 60 ? 'active' : ''}" data-freq="60">Bimestral</button>
+          <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3);">
+            ${[{f:7,l:'Semanal'},{f:14,l:'Quinzenal'},{f:30,l:'Mensal'},{f:60,l:'Bimestral'}].map(o =>
+              `<button class="detail-freq-btn ${this.selectedFrequency === o.f ? 'active' : ''}" data-freq="${o.f}"
+                style="flex:1;min-width:70px;padding:var(--space-2);border:2px solid ${this.selectedFrequency===o.f?'var(--verde-medio)':'var(--cinza-300)'};border-radius:var(--radius-md);background:${this.selectedFrequency===o.f?'var(--verde-medio)':'var(--branco)'};color:${this.selectedFrequency===o.f?'var(--branco)':'var(--cinza-700)'};cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-semibold);transition:all 150ms ease;">
+                ${o.l}
+              </button>`
+            ).join('')}
           </div>
-          <button class="btn btn-primary btn-full" style="margin-top:var(--space-3);" id="detail-subscribe-btn">
+          <button class="btn btn-primary btn-full" id="detail-subscribe-btn">
             🔄 Assinar ${Utils.formatBRL(savings.precoAssinatura)}/entrega
           </button>
         </div>
       `;
     }
 
-    // Share
+    // Share links
     const shareURL = `${window.location.origin}/produto.html?id=${p.id}`;
-    const shareText = `${p.nome} - ${p.curiosidade || p.descricao}`;
     const whatsappShare = Utils.whatsappLink('', `Olha esse produto incrível do Clube do Natural!\n\n*${p.nome}*\n${p.descricao}\n\n${shareURL}`);
 
     const sheet = document.getElementById('product-detail');
@@ -134,65 +146,90 @@ const ProductDetail = {
 
     sheet.innerHTML = `
       <div class="bottom-sheet-handle"></div>
-      <div class="detail-content">
-        <div class="detail-image"></div>
-        <div class="detail-body">
-          <div class="detail-badges">${selosHTML}</div>
-          <span class="product-card-category">${category ? category.icone + ' ' + category.nome : ''}</span>
-          <h2 class="detail-name">${p.nome}</h2>
-          <p class="detail-description">${p.descricao}</p>
-
-          <div class="detail-variations">${variacoesHTML}</div>
-
-          ${recurrenceHTML}
-
-          ${beneficiosHTML ? `
-          <div class="detail-section">
-            <h4>💪 Benefícios</h4>
-            <ul class="detail-list">${beneficiosHTML}</ul>
-          </div>` : ''}
-
-          ${comoUsarHTML ? `
-          <div class="detail-section">
-            <h4>📖 Como Usar</h4>
-            <ul class="detail-list">${comoUsarHTML}</ul>
-          </div>` : ''}
-
-          ${combinaHTML ? `
-          <div class="detail-section">
-            <h4>🤝 Combina Com</h4>
-            <div class="detail-related">${combinaHTML}</div>
-          </div>` : ''}
-
-          ${nutricionalHTML ? `
-          <div class="detail-section">
-            <h4>📊 Informação Nutricional</h4>
-            ${nutricionalHTML}
-          </div>` : ''}
-
-          ${p.curiosidade ? `
-          <div class="detail-section detail-curiosity">
-            <h4>💡 Você Sabia?</h4>
-            <p>${p.curiosidade}</p>
-            <a href="${whatsappShare}" target="_blank" class="btn btn-whatsapp btn-sm" style="margin-top:var(--space-2);">
-              📲 Compartilhar curiosidade
-            </a>
-          </div>` : ''}
-
-          ${p.contraindicacoes ? `
-          <div class="detail-section" style="background:var(--amarelo-claro);padding:var(--space-3);border-radius:var(--radius-md);">
-            <h4 style="font-size:var(--fs-sm);">⚠️ Contraindicações</h4>
-            <p style="font-size:var(--fs-sm);">${p.contraindicacoes}</p>
-          </div>` : ''}
+      <div style="flex:1;overflow-y:auto;padding:0 var(--space-4) var(--space-4);-webkit-overflow-scrolling:touch;">
+        <!-- Image placeholder -->
+        <div style="width:100%;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-4);background:linear-gradient(135deg,#a8e6cf 0%,#88d8a8 50%,#69c98e 100%);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:4rem;">
+          ${DataCategories.find(c => c.id === p.categoria)?.icone || '🌿'}
         </div>
+
+        <!-- Badges -->
+        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-3);">
+          ${selosHTML}
+        </div>
+
+        <!-- Category -->
+        <span style="font-size:var(--fs-sm);color:var(--verde-medio);font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:0.04em;">
+          ${category ? category.icone + ' ' + category.nome : ''}
+        </span>
+
+        <!-- Name -->
+        <h2 style="font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--cinza-900);margin:var(--space-1) 0 var(--space-2);">${p.nome}</h2>
+
+        <!-- Description -->
+        <p style="font-size:var(--fs-base);color:var(--cinza-700);line-height:var(--lh-relaxed);margin-bottom:var(--space-4);">${p.descricao}</p>
+
+        <!-- Variations -->
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-4);">
+          ${variacoesHTML}
+        </div>
+
+        <!-- Recurrence -->
+        ${recurrenceHTML}
+
+        <!-- Benefits -->
+        ${beneficiosHTML ? `
+        <div style="margin-bottom:var(--space-4);">
+          <h4 style="font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--cinza-900);margin-bottom:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--cinza-200);">💪 Benefícios</h4>
+          <ul style="list-style:none;padding:0;margin:0;">${beneficiosHTML}</ul>
+        </div>` : ''}
+
+        <!-- Como Usar -->
+        ${comoUsarHTML ? `
+        <div style="margin-bottom:var(--space-4);">
+          <h4 style="font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--cinza-900);margin-bottom:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--cinza-200);">📖 Como Usar</h4>
+          <ul style="list-style:none;padding:0;margin:0;">${comoUsarHTML}</ul>
+        </div>` : ''}
+
+        <!-- Combina Com -->
+        ${combinaHTML ? `
+        <div style="margin-bottom:var(--space-4);">
+          <h4 style="font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--cinza-900);margin-bottom:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--cinza-200);">🤝 Combina Com</h4>
+          <div style="display:flex;gap:var(--space-3);overflow-x:auto;padding-bottom:var(--space-2);scrollbar-width:none;">${combinaHTML}</div>
+        </div>` : ''}
+
+        <!-- Info Nutricional -->
+        ${nutricionalHTML ? `
+        <div style="margin-bottom:var(--space-4);">
+          <h4 style="font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--cinza-900);margin-bottom:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--cinza-200);">📊 Informação Nutricional</h4>
+          ${nutricionalHTML}
+        </div>` : ''}
+
+        <!-- Curiosidade -->
+        ${p.curiosidade ? `
+        <div style="background:var(--amarelo-claro);padding:var(--space-4);border-radius:var(--radius-lg);margin-bottom:var(--space-4);">
+          <h4 style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:var(--space-2);">💡 Você Sabia?</h4>
+          <p style="font-size:var(--fs-sm);color:var(--cinza-800);line-height:var(--lh-relaxed);margin-bottom:var(--space-3);">${p.curiosidade}</p>
+          <div style="display:flex;gap:var(--space-2);">
+            <a href="${whatsappShare}" target="_blank" class="btn btn-whatsapp btn-sm">📲 Compartilhar</a>
+          </div>
+        </div>` : ''}
+
+        <!-- Contraindicações -->
+        ${p.contraindicacoes ? `
+        <div style="background:var(--vermelho-claro);padding:var(--space-3);border-radius:var(--radius-md);margin-bottom:var(--space-4);border-left:4px solid var(--vermelho);">
+          <h4 style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:var(--space-1);">⚠️ Contraindicações</h4>
+          <p style="font-size:var(--fs-sm);color:var(--cinza-700);">${p.contraindicacoes}</p>
+        </div>` : ''}
       </div>
-      <div class="detail-footer">
+
+      <!-- Fixed bottom action bar -->
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-top:1px solid var(--cinza-200);background:var(--branco);">
         <div class="qty-control">
           <button id="detail-qty-minus">−</button>
           <span class="qty-value" id="detail-qty">${this.quantidade}</span>
           <button id="detail-qty-plus">+</button>
         </div>
-        <button class="btn btn-primary" id="detail-add-btn" style="flex:1;">
+        <button class="btn btn-primary" id="detail-add-btn" style="flex:1;padding:var(--space-3);">
           Adicionar ${Utils.formatBRL(this.selectedVariacao.preco * this.quantidade)}
         </button>
       </div>
@@ -207,17 +244,22 @@ const ProductDetail = {
 
     // Close backdrop
     const backdrop = document.getElementById('product-detail-backdrop');
-    if (backdrop) {
-      backdrop.onclick = () => this.close();
-    }
+    if (backdrop) backdrop.onclick = () => this.close();
 
     // Variations
     sheet.querySelectorAll('.detail-variation').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index);
         this.selectedVariacao = this.currentProduct.variacoes[idx];
-        sheet.querySelectorAll('.detail-variation').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        // Update variation styles
+        sheet.querySelectorAll('.detail-variation').forEach(b => {
+          b.style.borderColor = 'var(--cinza-300)';
+          b.style.background = 'var(--branco)';
+          b.style.color = 'var(--cinza-700)';
+        });
+        btn.style.borderColor = 'var(--verde-medio)';
+        btn.style.background = 'var(--verde-medio)';
+        btn.style.color = 'var(--branco)';
         this.updatePrice();
       });
     });
@@ -252,9 +294,7 @@ const ProductDetail = {
     sheet.querySelectorAll('.detail-freq-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.selectedFrequency = parseInt(btn.dataset.freq);
-        sheet.querySelectorAll('.detail-freq-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.render(); // re-render to update savings calculation
+        this.render(); // re-render to update savings
       });
     });
 

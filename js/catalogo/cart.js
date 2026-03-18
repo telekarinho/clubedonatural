@@ -1,33 +1,28 @@
 /* ============================================
    CLUBE DO NATURAL — Cart Sidebar
+   Classes match catalogo.css (cart-sidebar__)
    ============================================ */
 
 const Cart = {
   init() {
     this.bindEvents();
     AppState.on('cart', () => this.render());
-    AppState.on('cartOpen', (open) => {
-      if (open) this.openSidebar();
-      else this.closeSidebar();
-    });
     this.updateBadge();
   },
 
   bindEvents() {
     // Cart button in header
     document.querySelectorAll('.cart-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        AppState.set('cartOpen', !AppState.get('cartOpen'));
-      });
+      btn.addEventListener('click', () => this.toggleSidebar());
     });
 
     // Close button
     const closeBtn = document.getElementById('cart-close');
-    if (closeBtn) closeBtn.addEventListener('click', () => AppState.set('cartOpen', false));
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeSidebar());
 
     // Backdrop
     const backdrop = document.getElementById('cart-backdrop');
-    if (backdrop) backdrop.addEventListener('click', () => AppState.set('cartOpen', false));
+    if (backdrop) backdrop.addEventListener('click', () => this.closeSidebar());
 
     // Checkout button
     const checkoutBtn = document.getElementById('cart-checkout-btn');
@@ -37,17 +32,26 @@ const Cart = {
           Toast.warning('Carrinho vazio!');
           return;
         }
-        AppState.set('cartOpen', false);
+        this.closeSidebar();
         window.location.href = 'checkout.html';
       });
+    }
+  },
+
+  toggleSidebar() {
+    const sidebar = document.getElementById('cart-sidebar');
+    if (sidebar && sidebar.classList.contains('open')) {
+      this.closeSidebar();
+    } else {
+      this.openSidebar();
     }
   },
 
   openSidebar() {
     const sidebar = document.getElementById('cart-sidebar');
     const backdrop = document.getElementById('cart-backdrop');
-    if (sidebar) sidebar.classList.add('active');
-    if (backdrop) backdrop.classList.add('active');
+    if (sidebar) sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
     document.body.style.overflow = 'hidden';
     this.render();
   },
@@ -55,8 +59,8 @@ const Cart = {
   closeSidebar() {
     const sidebar = document.getElementById('cart-sidebar');
     const backdrop = document.getElementById('cart-backdrop');
-    if (sidebar) sidebar.classList.remove('active');
-    if (backdrop) backdrop.classList.remove('active');
+    if (sidebar) sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
     document.body.style.overflow = '';
   },
 
@@ -67,7 +71,6 @@ const Cart = {
     const cart = AppState.get('cart');
 
     if (!itemsContainer) return;
-
     this.updateBadge();
 
     if (!cart || cart.length === 0) {
@@ -81,39 +84,35 @@ const Cart = {
     if (footer) footer.style.display = 'block';
 
     itemsContainer.innerHTML = cart.map(item => `
-      <div class="cart-item" data-key="${item.key}">
-        <div class="cart-item-info">
-          <div class="cart-item-name">
+      <div class="cart-sidebar__item" data-key="${item.key}">
+        <div class="cart-sidebar__item-img"></div>
+        <div class="cart-sidebar__item-info">
+          <div class="cart-sidebar__item-name">
             ${item.nome}
-            ${item.isSubscription ? '<span class="badge badge-recorrente" style="font-size:10px;">🔄 Assinatura</span>' : ''}
+            ${item.isSubscription ? '<span class="badge badge-recorrente" style="font-size:10px;margin-left:4px;">🔄</span>' : ''}
           </div>
-          <div class="cart-item-detail">${item.peso}</div>
-          <div class="cart-item-price">
+          <div style="font-size:var(--fs-xs);color:var(--cinza-500);">${item.peso}</div>
+          <div class="cart-sidebar__item-price">
             ${item.isSubscription && item.precoOriginal !== item.preco ?
-              `<span class="price-old">${Utils.formatBRL(item.precoOriginal)}</span> ` : ''
+              `<span style="text-decoration:line-through;color:var(--cinza-400);font-weight:400;font-size:var(--fs-xs);margin-right:4px;">${Utils.formatBRL(item.precoOriginal)}</span>` : ''
             }${Utils.formatBRL(item.preco)}
           </div>
-        </div>
-        <div class="cart-item-actions">
-          <div class="qty-control">
-            <button class="cart-qty-btn" data-key="${item.key}" data-delta="-1">−</button>
-            <span class="qty-value">${item.quantidade}</span>
-            <button class="cart-qty-btn" data-key="${item.key}" data-delta="1">+</button>
+          <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1);">
+            <button class="cart-qty-btn" data-key="${item.key}" data-delta="-1" style="width:28px;height:28px;border:1px solid var(--cinza-300);border-radius:var(--radius-sm);background:var(--cinza-100);cursor:pointer;font-size:var(--fs-base);">−</button>
+            <span style="font-weight:var(--fw-semibold);min-width:20px;text-align:center;">${item.quantidade}</span>
+            <button class="cart-qty-btn" data-key="${item.key}" data-delta="1" style="width:28px;height:28px;border:1px solid var(--cinza-300);border-radius:var(--radius-sm);background:var(--cinza-100);cursor:pointer;font-size:var(--fs-base);">+</button>
           </div>
-          <button class="cart-remove-btn" data-key="${item.key}" title="Remover">🗑️</button>
         </div>
+        <button class="cart-sidebar__item-remove" data-key="${item.key}" title="Remover">✕</button>
       </div>
     `).join('');
 
-    // Subtotal
+    // Total
     const subtotal = AppState.getCartTotal();
-    const subtotalEl = document.getElementById('cart-subtotal');
-    if (subtotalEl) subtotalEl.textContent = Utils.formatBRL(subtotal);
-
     const totalEl = document.getElementById('cart-total');
-    if (totalEl) totalEl.textContent = Utils.formatBRL(subtotal); // taxa será adicionada no checkout
+    if (totalEl) totalEl.textContent = Utils.formatBRL(subtotal);
 
-    // Subscription items summary
+    // Subscription summary
     const subItems = AppState.getCartSubscriptionItems();
     const subSummary = document.getElementById('cart-sub-summary');
     if (subSummary) {
@@ -122,9 +121,9 @@ const Cart = {
           sum + (item.precoOriginal - item.preco) * item.quantidade, 0
         );
         subSummary.innerHTML = `
-          <div style="background:linear-gradient(135deg,#E8F5E9,#C8E6C9);padding:var(--space-3);border-radius:var(--radius-md);margin-top:var(--space-3);font-size:var(--fs-sm);">
-            🔄 <strong>${subItems.length} item(ns) recorrente(s)</strong><br>
-            <span style="color:var(--verde-medio);">Economia: ${Utils.formatBRL(totalSavings)} por entrega</span>
+          <div style="background:linear-gradient(135deg,#E8F5E9,#C8E6C9);padding:var(--space-3) var(--space-4);font-size:var(--fs-sm);">
+            🔄 <strong>${subItems.length} item(ns) recorrente(s)</strong>
+            <span style="color:var(--verde-medio);margin-left:var(--space-2);">Economia: ${Utils.formatBRL(totalSavings)}/entrega</span>
           </div>
         `;
         subSummary.style.display = 'block';
@@ -133,14 +132,14 @@ const Cart = {
       }
     }
 
-    // Bind cart item events
+    // Bind events
     itemsContainer.querySelectorAll('.cart-qty-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         AppState.updateCartQty(btn.dataset.key, parseInt(btn.dataset.delta));
       });
     });
 
-    itemsContainer.querySelectorAll('.cart-remove-btn').forEach(btn => {
+    itemsContainer.querySelectorAll('.cart-sidebar__item-remove').forEach(btn => {
       btn.addEventListener('click', () => {
         AppState.removeFromCart(btn.dataset.key);
         Toast.info('Item removido do carrinho');

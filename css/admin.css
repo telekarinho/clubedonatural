@@ -1,0 +1,326 @@
+/* ============================================
+   CLUBE DO NATURAL — Admin Layout
+   Sidebar + Content + Offline indicator
+   ============================================ */
+
+/* === ADMIN LAYOUT === */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* === SIDEBAR === */
+.admin-sidebar {
+  width: var(--sidebar-width);
+  background: var(--verde-escuro);
+  color: var(--branco);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  transition: transform var(--transition-base);
+}
+
+.sidebar-header {
+  padding: var(--space-5);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--branco);
+  text-decoration: none;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+}
+
+.sidebar-logo .logo-icon {
+  background: var(--verde-claro);
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+.sidebar-user {
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+  opacity: 0.8;
+}
+
+.sidebar-user strong {
+  display: block;
+  opacity: 1;
+  font-size: var(--fs-base);
+}
+
+/* === SIDEBAR NAV === */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3) 0;
+}
+
+.sidebar-nav-group {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-top: var(--space-3);
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  color: rgba(255,255,255,0.7);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--branco);
+}
+
+.sidebar-link.active {
+  background: rgba(255,255,255,0.12);
+  color: var(--branco);
+  border-left-color: var(--verde-claro);
+}
+
+.sidebar-link-icon { font-size: 18px; width: 20px; text-align: center; }
+
+.sidebar-link .badge-count {
+  position: static;
+  min-width: 18px;
+  height: 18px;
+  font-size: 10px;
+  margin-left: auto;
+}
+
+.sidebar-footer {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: rgba(255,255,255,0.6);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  background: none;
+  border: none;
+  width: 100%;
+  padding: var(--space-2) 0;
+}
+
+.sidebar-logout:hover { color: var(--vermelho); }
+
+/* === MAIN CONTENT === */
+.admin-main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  background: var(--bege);
+  min-height: 100vh;
+}
+
+/* === ADMIN HEADER === */
+.admin-header {
+  background: var(--branco);
+  padding: var(--space-4) var(--space-6);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.admin-header-left h1 {
+  font-size: var(--fs-xl);
+  margin: 0;
+}
+
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Hamburger menu for mobile */
+.sidebar-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover { background: var(--cinza-100); }
+
+/* === ONLINE/OFFLINE INDICATOR === */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+}
+
+.connection-status.online {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.connection-status.offline {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+.connection-status.online .connection-dot { background: #4CAF50; }
+.connection-status.offline .connection-dot { background: #F44336; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Offline sync banner */
+.sync-banner {
+  background: #FFF3E0;
+  color: #E65100;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+  text-align: center;
+  display: none;
+}
+
+.sync-banner.active { display: block; }
+
+/* === ADMIN CONTENT === */
+.admin-content {
+  padding: var(--space-6);
+}
+
+/* === PAGE SECTIONS === */
+.admin-page {
+  display: none;
+}
+
+.admin-page.active {
+  display: block;
+  animation: fadeIn var(--transition-fast) ease;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-toggle {
+    display: flex;
+  }
+
+  .admin-main {
+    margin-left: 0;
+  }
+
+  .admin-content {
+    padding: var(--space-4);
+  }
+
+  /* Sidebar overlay */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: calc(var(--z-sticky) - 1);
+  }
+
+  .sidebar-overlay.active { display: block; }
+}
+
+/* === LOJA SELECTOR (for multi-store) === */
+.store-selector {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--cinza-300);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  background: var(--branco);
+  min-width: 180px;
+}
+
+/* === ACTION BAR === */
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.action-bar-left { display: flex; align-items: center; gap: var(--space-3); }
+.action-bar-right { display: flex; align-items: center; gap: var(--space-2); }
+
+/* Date filter */
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.date-filter input[type="date"] {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--cinza-300);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  width: auto;
+}
+
+/* === STAT GRID === */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}

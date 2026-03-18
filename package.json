@@ -1,0 +1,13 @@
+{
+  "name": "clubedonatural",
+  "version": "1.0.0",
+  "description": "Clube do Natural - Rede de lojas de produtos naturais com catálogo viral, admin completo e sistema de recorrência",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "start": "npx serve . -p 3000"
+  },
+  "keywords": ["produtos-naturais", "ecommerce", "pwa", "vanilla-js"],
+  "author": "Clube do Natural",
+  "license": "PROPRIETARY"
+}

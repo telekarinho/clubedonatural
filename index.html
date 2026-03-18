@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2E7D32">
+  <meta name="description" content="Clube do Natural — Produtos naturais de qualidade entregues na porta da sua casa. Grãos, suplementos, chás, temperos e muito mais.">
+  <title>Clube do Natural — Saúde e Bem-estar</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/landing.css">
+  <link rel="stylesheet" href="css/catalogo.css">
+</head>
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="header" id="header">
+    <div class="header__inner container">
+      <a href="index.html" class="header__logo">
+        <span class="header__logo-icon">🌿</span>
+        <span class="header__logo-text">Clube do Natural</span>
+      </a>
+
+      <nav class="header__nav" id="main-nav">
+        <a href="catalogo.html" class="header__nav-link">Catálogo</a>
+        <a href="#sobre" class="header__nav-link">Sobre</a>
+        <a href="#lojas" class="header__nav-link">Lojas</a>
+        <a href="#contato" class="header__nav-link">Contato</a>
+      </nav>
+
+      <button class="header__cart" id="btn-cart" aria-label="Carrinho de compras">
+        🛒
+        <span class="header__cart-badge" id="cart-badge">0</span>
+      </button>
+
+      <button class="header__menu-toggle" id="btn-menu" aria-label="Abrir menu">
+        ☰
+      </button>
+    </div>
+  </header>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero" id="hero">
+    <div class="hero__inner container">
+      <h1 class="hero__title">Saúde e Bem-estar na porta da sua casa</h1>
+      <p class="hero__subtitle">
+        Produtos naturais selecionados, de origem confiável, entregues com praticidade no conforto do seu lar.
+      </p>
+      <div class="hero__actions">
+        <a href="catalogo.html" class="btn btn--primary btn--lg">Ver Produtos</a>
+        <a href="#lojas" class="btn btn--outline btn--lg">Conheça as Lojas</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CATEGORIAS ========== -->
+  <section class="section categories" id="categorias">
+    <div class="container">
+      <h2 class="section__title">Categorias</h2>
+      <p class="section__subtitle">Encontre tudo o que você precisa para uma vida mais saudável</p>
+
+      <div class="categories__grid">
+        <a href="catalogo.html?cat=graos" class="category-card" style="--cat-color: #8B6914">
+          <span class="category-card__icon">🌾</span>
+          <span class="category-card__name">Grãos &amp; Cereais</span>
+        </a>
+
+        <a href="catalogo.html?cat=suplementos" class="category-card" style="--cat-color: #2E7D32">
+          <span class="category-card__icon">💪</span>
+          <span class="category-card__name">Suplementos</span>
+        </a>
+
+        <a href="catalogo.html?cat=chas" class="category-card" style="--cat-color: #558B2F">
+          <span class="category-card__icon">🍵</span>
+          <span class="category-card__name">Chás &amp; Infusões</span>
+        </a>
+
+        <a href="catalogo.html?cat=temperos" class="category-card" style="--cat-color: #E65100">
+          <span class="category-card__icon">🌶️</span>
+          <span class="category-card__name">Temperos</span>
+        </a>
+
+        <a href="catalogo.html?cat=mel" class="category-card" style="--cat-color: #F57F17">
+          <span class="category-card__icon">🍯</span>
+          <span class="category-card__name">Mel &amp; Derivados</span>
+        </a>
+
+        <a href="catalogo.html?cat=oleos" class="category-card" style="--cat-color: #33691E">
+          <span class="category-card__icon">🫒</span>
+          <span class="category-card__name">Óleos Naturais</span>
+        </a>
+
+        <a href="catalogo.html?cat=snacks" class="category-card" style="--cat-color: #4E342E">
+          <span class="category-card__icon">🥜</span>
+          <span class="category-card__name">Snacks Saudáveis</span>
+        </a>
+
+        <a href="catalogo.html?cat=higiene" class="category-card" style="--cat-color: #00695C">
+          <span class="category-card__icon">🧼</span>
+          <span class="category-card__name">Higiene Natural</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== MAIS VENDIDOS ========== -->
+  <section class="section featured" id="mais-vendidos">
+    <div class="container">
+      <h2 class="section__title">Mais Vendidos</h2>
+      <p class="section__subtitle">Os favoritos dos nossos clientes</p>
+
+      <div class="featured__scroll" id="featured-products">
+        <!-- Product cards rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== BENEFÍCIOS ========== -->
+  <section class="section benefits" id="sobre">
+    <div class="container">
+      <h2 class="section__title">Por que escolher o Clube do Natural?</h2>
+      <p class="section__subtitle">Qualidade e praticidade para o seu dia a dia</p>
+
+      <div class="benefits__grid">
+        <div class="benefit-card">
+          <span class="benefit-card__icon">🍃</span>
+          <h3 class="benefit-card__title">100% Natural</h3>
+          <p class="benefit-card__text">
+            Todos os nossos produtos são cuidadosamente selecionados para garantir origem natural e qualidade superior.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <span class="benefit-card__icon">🚚</span>
+          <h3 class="benefit-card__title">Entrega Rápida</h3>
+          <p class="benefit-card__text">
+            Receba seus produtos em casa com rapidez e segurança, em embalagens sustentáveis.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <span class="benefit-card__icon">🔄</span>
+          <h3 class="benefit-card__title">Assinatura com Desconto</h3>
+          <p class="benefit-card__text">
+            Assine e receba seus itens favoritos periodicamente com descontos exclusivos.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CTA RECORRÊNCIA ========== -->
+  <section class="section recurrence-cta" id="assinatura">
+    <div class="container">
+      <div class="recurrence-cta__inner">
+        <h2 class="recurrence-cta__title">Assine e Economize</h2>
+        <p class="recurrence-cta__subtitle">
+          Monte sua cesta de produtos naturais e receba automaticamente com condições especiais.
+        </p>
+
+        <ul class="recurrence-cta__features">
+          <li class="recurrence-cta__feature">
+            <span class="recurrence-cta__feature-icon">💰</span>
+            Desconto de 10% a 15% em todos os itens da assinatura
+          </li>
+          <li class="recurrence-cta__feature">
+            <span class="recurrence-cta__feature-icon">📦</span>
+            Entrega automática na frequência que você escolher
+          </li>
+          <li class="recurrence-cta__feature">
+            <span class="recurrence-cta__feature-icon">✅</span>
+            Cancele quando quiser, sem burocracia
+          </li>
+        </ul>
+
+        <a href="catalogo.html" class="btn btn--primary btn--lg">Comece Agora</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer" id="contato">
+    <div class="container">
+      <div class="footer__grid">
+        <div class="footer__brand">
+          <div class="footer__logo">
+            <span>🌿</span> Clube do Natural
+          </div>
+          <p class="footer__tagline">Saúde e bem-estar com produtos naturais de qualidade.</p>
+          <div class="footer__social">
+            <a href="#" class="footer__social-link" aria-label="Instagram">📷</a>
+            <a href="#" class="footer__social-link" aria-label="Facebook">👤</a>
+            <a href="#" class="footer__social-link" aria-label="WhatsApp">💬</a>
+          </div>
+        </div>
+
+        <div class="footer__column">
+          <h4 class="footer__column-title">Catálogo</h4>
+          <ul class="footer__links">
+            <li><a href="catalogo.html?cat=graos">Grãos &amp; Cereais</a></li>
+            <li><a href="catalogo.html?cat=suplementos">Suplementos</a></li>
+            <li><a href="catalogo.html?cat=chas">Chás &amp; Infusões</a></li>
+            <li><a href="catalogo.html?cat=temperos">Temperos</a></li>
+            <li><a href="catalogo.html?cat=mel">Mel &amp; Derivados</a></li>
+            <li><a href="catalogo.html?cat=oleos">Óleos Naturais</a></li>
+          </ul>
+        </div>
+
+        <div class="footer__column">
+          <h4 class="footer__column-title">Institucional</h4>
+          <ul class="footer__links">
+            <li><a href="#sobre">Sobre Nós</a></li>
+            <li><a href="#lojas">Nossas Lojas</a></li>
+            <li><a href="#assinatura">Programa de Assinatura</a></li>
+            <li><a href="#">Política de Privacidade</a></li>
+            <li><a href="#">Termos de Uso</a></li>
+          </ul>
+        </div>
+
+        <div class="footer__column">
+          <h4 class="footer__column-title">Contato</h4>
+          <ul class="footer__links">
+            <li>📞 (11) 99999-0000</li>
+            <li>✉️ contato@clubedonatural.com.br</li>
+            <li>🕐 Seg–Sáb: 8h às 20h</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer__bottom">
+        <p>&copy; 2026 Clube do Natural. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========== OVERLAYS ========== -->
+  <div id="toast-container"></div>
+
+  <div id="cookie-banner" class="cookie-banner" hidden>
+    <div class="cookie-banner__inner container">
+      <p class="cookie-banner__text">
+        Usamos cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa
+        <a href="#">Política de Privacidade</a>.
+      </p>
+      <button class="btn btn--primary btn--sm" id="btn-accept-cookies">Aceitar</button>
+    </div>
+  </div>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script src="js/core/storage.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/utils.js"></script>
+  <script src="js/core/auth.js"></script>
+  <script src="js/core/router.js"></script>
+  <script src="js/data/categories.js"></script>
+  <script src="js/data/products.js"></script>
+  <script src="js/data/stores.js"></script>
+  <script src="js/data/employees.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

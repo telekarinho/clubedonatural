@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2E7D32">
+  <meta name="description" content="Catálogo de Produtos Naturais — Clube do Natural. Grãos, suplementos, chás, temperos, mel, óleos e muito mais.">
+  <title>Catálogo — Clube do Natural</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/landing.css">
+  <link rel="stylesheet" href="css/catalogo.css">
+</head>
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="header" id="header">
+    <div class="header__inner container">
+      <a href="index.html" class="header__logo">
+        <span class="header__logo-icon">🌿</span>
+        <span class="header__logo-text">Clube do Natural</span>
+      </a>
+
+      <nav class="header__nav" id="main-nav">
+        <a href="catalogo.html" class="header__nav-link header__nav-link--active">Catálogo</a>
+        <a href="index.html#sobre" class="header__nav-link">Sobre</a>
+        <a href="index.html#lojas" class="header__nav-link">Lojas</a>
+        <a href="index.html#contato" class="header__nav-link">Contato</a>
+      </nav>
+
+      <button class="header__cart" id="btn-cart" aria-label="Carrinho de compras">
+        🛒
+        <span class="header__cart-badge" id="cart-badge">0</span>
+      </button>
+
+      <button class="header__menu-toggle" id="btn-menu" aria-label="Abrir menu">
+        ☰
+      </button>
+    </div>
+  </header>
+
+  <!-- ========== SEARCH SECTION ========== -->
+  <section class="search-section" id="search-section">
+    <div class="container">
+      <div class="search-section__input-wrap">
+        <span class="search-section__icon">🔍</span>
+        <input
+          type="search"
+          class="search-section__input"
+          id="search-input"
+          placeholder="Buscar produtos naturais..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="search-section__filters" id="seal-filters">
+        <button class="search-section__filter-pill" data-selo="organico">🌱 Orgânico</button>
+        <button class="search-section__filter-pill" data-selo="vegano">🥬 Vegano</button>
+        <button class="search-section__filter-pill" data-selo="sem_gluten">🌾 Sem Glúten</button>
+        <button class="search-section__filter-pill" data-selo="sem_lactose">🥛 Sem Lactose</button>
+        <button class="search-section__filter-pill" data-selo="integral">🍞 Integral</button>
+        <button class="search-section__filter-pill" data-selo="sem_acucar">🚫 Sem Açúcar</button>
+      </div>
+
+      <div class="search-section__sort-wrap">
+        <label class="search-section__sort-label" for="sort-select">Ordenar por:</label>
+        <select class="search-section__sort" id="sort-select">
+          <option value="relevancia">Relevância</option>
+          <option value="menor_preco">Menor Preço</option>
+          <option value="maior_preco">Maior Preço</option>
+          <option value="az">A–Z</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CATEGORY BAR ========== -->
+  <nav class="category-bar" id="category-bar">
+    <div class="category-bar__scroll">
+      <button class="category-bar__pill active" data-category="todos">Todos</button>
+      <button class="category-bar__pill" data-category="graos">🌾 Grãos &amp; Cereais</button>
+      <button class="category-bar__pill" data-category="suplementos">💪 Suplementos</button>
+      <button class="category-bar__pill" data-category="chas">🍵 Chás &amp; Infusões</button>
+      <button class="category-bar__pill" data-category="temperos">🌶️ Temperos</button>
+      <button class="category-bar__pill" data-category="mel">🍯 Mel &amp; Derivados</button>
+      <button class="category-bar__pill" data-category="oleos">🫒 Óleos Naturais</button>
+      <button class="category-bar__pill" data-category="snacks">🥜 Snacks Saudáveis</button>
+      <button class="category-bar__pill" data-category="higiene">🧼 Higiene Natural</button>
+    </div>
+  </nav>
+
+  <!-- ========== PRODUCT LISTING ========== -->
+  <main class="section" id="catalogo-main">
+    <div class="container">
+      <div class="results-meta">
+        <span id="results-count">Carregando produtos...</span>
+      </div>
+
+      <div class="product-grid" id="product-grid">
+        <!-- Product cards rendered by JS -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ========== BOTTOM SHEET — PRODUCT DETAIL ========== -->
+  <div class="product-detail" id="product-detail" role="dialog" aria-modal="true" aria-label="Detalhes do produto">
+    <div class="product-detail__backdrop" id="product-detail-backdrop"></div>
+    <div class="product-detail__sheet">
+      <div class="product-detail__handle">
+        <div class="product-detail__handle-bar"></div>
+      </div>
+
+      <div class="product-detail__content">
+        <div class="product-detail__image-wrap">
+          <img class="product-detail__image" id="detail-image" src="" alt="">
+        </div>
+
+        <div class="product-detail__badges" id="detail-badges">
+          <!-- Badges rendered by JS -->
+        </div>
+
+        <h2 class="product-detail__name" id="detail-name"></h2>
+        <span class="product-detail__category" id="detail-category"></span>
+
+        <div class="product-detail__price-wrap">
+          <span class="product-detail__price-old" id="detail-price-old"></span>
+          <span class="product-detail__price" id="detail-price"></span>
+          <span class="product-detail__price-sub" id="detail-price-sub"></span>
+        </div>
+
+        <p class="product-detail__description" id="detail-description"></p>
+
+        <!-- Benefícios -->
+        <div class="product-detail__section" id="detail-section-beneficios">
+          <h3 class="product-detail__section-title">Benefícios</h3>
+          <div class="product-detail__section-content" id="detail-beneficios"></div>
+        </div>
+
+        <!-- Como Usar -->
+        <div class="product-detail__section" id="detail-section-como-usar">
+          <h3 class="product-detail__section-title">Como Usar</h3>
+          <div class="product-detail__section-content" id="detail-como-usar"></div>
+        </div>
+
+        <!-- Combina Com -->
+        <div class="product-detail__section" id="detail-section-combina">
+          <h3 class="product-detail__section-title">Combina Com</h3>
+          <div class="product-detail__combina-grid" id="detail-combina"></div>
+        </div>
+
+        <!-- Informação Nutricional -->
+        <div class="product-detail__section" id="detail-section-nutricional">
+          <h3 class="product-detail__section-title">Informação Nutricional</h3>
+          <table class="product-detail__nutri-table" id="detail-nutricional">
+            <thead>
+              <tr>
+                <th>Nutriente</th>
+                <th>Quantidade</th>
+              </tr>
+            </thead>
+            <tbody id="detail-nutri-body">
+              <!-- Rows rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Assine e Economize -->
+        <div class="product-detail__recurrence-box" id="detail-recurrence-box">
+          <h3 class="product-detail__recurrence-title">🔄 Assine e Economize</h3>
+          <div class="product-detail__recurrence-compare">
+            <div class="product-detail__recurrence-option product-detail__recurrence-option--normal">
+              Avulso
+              <strong id="detail-recurrence-normal"></strong>
+            </div>
+            <div class="product-detail__recurrence-option product-detail__recurrence-option--sub">
+              Assinatura
+              <strong id="detail-recurrence-sub"></strong>
+            </div>
+          </div>
+          <p class="product-detail__recurrence-savings" id="detail-recurrence-savings"></p>
+        </div>
+
+        <!-- Curiosidade -->
+        <div class="product-detail__section" id="detail-section-curiosidade">
+          <h3 class="product-detail__section-title">Curiosidade</h3>
+          <div class="product-detail__curiosidade" id="detail-curiosidade">
+            <span class="product-detail__curiosidade-icon">💡</span>
+            <span id="detail-curiosidade-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed add to cart -->
+      <div class="product-detail__action-bar">
+        <div class="product-detail__qty-control">
+          <button class="product-detail__qty-btn" id="detail-qty-minus" aria-label="Diminuir quantidade">−</button>
+          <span class="product-detail__qty-value" id="detail-qty">1</span>
+          <button class="product-detail__qty-btn" id="detail-qty-plus" aria-label="Aumentar quantidade">+</button>
+        </div>
+        <button class="product-detail__cart-btn" id="detail-add-cart">Adicionar ao Carrinho</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CART SIDEBAR ========== -->
+  <div class="cart-sidebar__backdrop" id="cart-backdrop"></div>
+  <aside class="cart-sidebar" id="cart-sidebar" role="dialog" aria-modal="true" aria-label="Carrinho de compras">
+    <div class="cart-sidebar__header">
+      <h2 class="cart-sidebar__title">🛒 Carrinho</h2>
+      <button class="cart-sidebar__close" id="cart-close" aria-label="Fechar carrinho">✕</button>
+    </div>
+
+    <div class="cart-sidebar__items" id="cart-items">
+      <div class="cart-sidebar__empty" id="cart-empty">
+        <span class="cart-sidebar__empty-icon">🛒</span>
+        <p>Seu carrinho está vazio.</p>
+        <p>Explore nosso catálogo e adicione produtos!</p>
+      </div>
+      <!-- Cart items rendered by JS -->
+    </div>
+
+    <div class="cart-sidebar__footer" id="cart-footer">
+      <div class="cart-sidebar__total">
+        <span>Total</span>
+        <span id="cart-total">R$ 0,00</span>
+      </div>
+      <button class="cart-sidebar__checkout-btn" id="cart-checkout-btn">Finalizar Pedido</button>
+    </div>
+  </aside>
+
+  <!-- ========== TOAST CONTAINER ========== -->
+  <div id="toast-container"></div>
+
+  <!-- ========== COOKIE BANNER ========== -->
+  <div id="cookie-banner" class="cookie-banner" hidden>
+    <div class="cookie-banner__inner container">
+      <p class="cookie-banner__text">
+        Usamos cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa
+        <a href="#">Política de Privacidade</a>.
+      </p>
+      <button class="btn btn--primary btn--sm" id="btn-accept-cookies">Aceitar</button>
+    </div>
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer" id="contato">
+    <div class="container">
+      <div class="footer__grid">
+        <div class="footer__brand">
+          <div class="footer__logo">
+            <span>🌿</span> Clube do Natural
+          </div>
+          <p class="footer__tagline">Saúde e bem-estar com produtos naturais de qualidade.</p>
+          <div class="footer__social">
+            <a href="#" class="footer__social-link" aria-label="Instagram">📷</a>
+            <a href="#" class="footer__social-link" aria-label="Facebook">👤</a>
+            <a href="#" class="footer__social-link" aria-label="WhatsApp">💬</a>
+          </div>
+        </div>
+
+        <div class="footer__column">
+          <h4 class="footer__column-title">Catálogo</h4>
+          <ul class="footer__links">
+            <li><a href="catalogo.html?cat=graos">Grãos &amp; Cereais</a></li>
+            <li><a href="catalogo.html?cat=suplementos">Suplementos</a></li>
+            <li><a href="catalogo.html?cat=chas">Chás &amp; Infusões</a></li>
+            <li><a href="catalogo.html?cat=temperos">Temperos</a></li>
+            <li><a href="catalogo.html?cat=mel">Mel &amp; Derivados</a></li>
+            <li><a href="catalogo.html?cat=oleos">Óleos Naturais</a></li>
+          </ul>
+        </div>
+
+        <div class="footer__column">
+          <h4 class="footer__column-title">Institucional</h4>
+          <ul class="footer__links">
+            <li><a href="index.html#sobre">Sobre Nós</a></li>
+            <li><a href="index.html#lojas">Nossas Lojas</a></li>
+            <li><a href="index.html#assinatura">Programa de Assinatura</a></li>
+            <li><a href="#">Política de Privacidade</a></li>
+            <li><a href="#">Termos de Uso</a></li>
+          </ul>
+        </div>
+
+        <div class="footer__column">
+          <h4 class="footer__column-title">Contato</h4>
+          <ul class="footer__links">
+            <li>📞 (11) 99999-0000</li>
+            <li>✉️ contato@clubedonatural.com.br</li>
+            <li>🕐 Seg–Sáb: 8h às 20h</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer__bottom">
+        <p>&copy; 2026 Clube do Natural. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script src="js/core/storage.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/utils.js"></script>
+  <script src="js/core/auth.js"></script>
+  <script src="js/core/router.js"></script>
+  <script src="js/data/categories.js"></script>
+  <script src="js/data/products.js"></script>
+  <script src="js/data/stores.js"></script>
+  <script src="js/data/employees.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/catalogo/product-card.js"></script>
+  <script src="js/catalogo/cart.js"></script>
+  <script src="js/catalogo/search.js"></script>
+  <script src="js/catalogo/filters.js"></script>
+  <script src="js/catalogo/product-detail.js"></script>
+  <script src="js/pages/catalogo.js"></script>
+</body>
+</html>

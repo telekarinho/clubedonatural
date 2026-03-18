@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1B4332">
+  <meta name="description" content="Clube do Natural — Painel Administrativo">
+  <title>Admin — Clube do Natural</title>
+  <link rel="manifest" href="../manifest.json">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/admin.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/forms.css">
+  <link rel="stylesheet" href="../css/tables.css">
+</head>
+<body class="admin-body">
+
+  <!-- ========== LOGIN OVERLAY ========== -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-card__logo">
+        <span class="login-card__icon">🌿</span>
+        <h1 class="login-card__title">Clube do Natural</h1>
+        <p class="login-card__subtitle">Acesso restrito</p>
+      </div>
+      <form id="login-form" class="login-form" autocomplete="off">
+        <div class="form-group">
+          <label for="login-celular" class="form-label">Celular</label>
+          <input
+            type="tel"
+            id="login-celular"
+            class="form-input"
+            placeholder="(11) 99999-0001"
+            required
+            autocomplete="tel"
+          >
+        </div>
+        <div class="form-group">
+          <label for="login-senha" class="form-label">Senha</label>
+          <input
+            type="password"
+            id="login-senha"
+            class="form-input"
+            placeholder="Sua senha"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+        <p id="login-error" class="login-error" hidden></p>
+        <button type="submit" class="btn btn--primary btn--full">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== ADMIN SHELL ========== -->
+  <div id="admin-shell" class="admin-shell" hidden>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="admin-sidebar" class="admin-sidebar">
+      <div class="sidebar__header">
+        <a href="../index.html" class="sidebar__logo">
+          <span class="sidebar__logo-icon">🌿</span>
+          <span class="sidebar__logo-text">Clube do Natural</span>
+        </a>
+      </div>
+
+      <div class="sidebar__user" id="sidebar-user">
+        <span class="sidebar__user-name" id="sidebar-user-name">—</span>
+        <span class="sidebar__user-cargo" id="sidebar-user-cargo">—</span>
+      </div>
+
+      <nav class="sidebar__nav">
+        <!-- PRINCIPAL -->
+        <p class="sidebar__group-label">PRINCIPAL</p>
+        <a href="#" class="sidebar__link sidebar__link--active" data-page="dashboard">
+          <span class="sidebar__link-icon">📊</span>
+          <span class="sidebar__link-text">Dashboard</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="pedidos">
+          <span class="sidebar__link-icon">📋</span>
+          <span class="sidebar__link-text">Pedidos</span>
+          <span class="sidebar__badge" id="pedidos-badge" hidden>0</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="assinaturas">
+          <span class="sidebar__link-icon">🔄</span>
+          <span class="sidebar__link-text">Assinaturas</span>
+        </a>
+
+        <!-- OPERAÇÕES -->
+        <p class="sidebar__group-label">OPERAÇÕES</p>
+        <a href="#" class="sidebar__link" data-page="estoque">
+          <span class="sidebar__link-icon">📦</span>
+          <span class="sidebar__link-text">Estoque</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="caixa">
+          <span class="sidebar__link-icon">💰</span>
+          <span class="sidebar__link-text">Caixa</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="nf">
+          <span class="sidebar__link-icon">🧾</span>
+          <span class="sidebar__link-text">Notas Fiscais</span>
+        </a>
+
+        <!-- GESTÃO -->
+        <p class="sidebar__group-label">GESTÃO</p>
+        <a href="#" class="sidebar__link" data-page="produtos">
+          <span class="sidebar__link-icon">🏷️</span>
+          <span class="sidebar__link-text">Produtos</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="lojas">
+          <span class="sidebar__link-icon">🏪</span>
+          <span class="sidebar__link-text">Lojas</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="funcionarios">
+          <span class="sidebar__link-icon">👥</span>
+          <span class="sidebar__link-text">Funcionários</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="clientes">
+          <span class="sidebar__link-icon">👤</span>
+          <span class="sidebar__link-text">Clientes</span>
+        </a>
+
+        <!-- ANÁLISE -->
+        <p class="sidebar__group-label">ANÁLISE</p>
+        <a href="#" class="sidebar__link" data-page="relatorios">
+          <span class="sidebar__link-icon">📈</span>
+          <span class="sidebar__link-text">Relatórios</span>
+        </a>
+        <a href="#" class="sidebar__link" data-page="config">
+          <span class="sidebar__link-icon">⚙️</span>
+          <span class="sidebar__link-text">Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button id="btn-logout" class="sidebar__logout" type="button">
+          <span>🚪</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="admin-main">
+
+      <!-- Admin Header -->
+      <header class="admin-header" id="admin-header">
+        <div class="admin-header__left">
+          <button id="btn-sidebar-toggle" class="admin-header__hamburger" type="button" aria-label="Abrir menu">
+            <span></span><span></span><span></span>
+          </button>
+          <h1 class="admin-header__title" id="admin-page-title">Dashboard</h1>
+        </div>
+        <div class="admin-header__right">
+          <span class="admin-header__status" id="connection-status">
+            <span class="status-dot status-dot--online"></span>
+            <span class="status-text">Online</span>
+          </span>
+          <select id="store-selector" class="admin-header__store-select">
+            <option value="todas">Todas as Lojas</option>
+            <option value="centro">Centro</option>
+            <option value="shopping">Shopping</option>
+            <option value="norte">Zona Norte</option>
+            <option value="sul">Zona Sul</option>
+            <option value="praia">Praia Grande</option>
+          </select>
+          <time class="admin-header__datetime" id="header-datetime"></time>
+        </div>
+      </header>
+
+      <!-- Sync Banner -->
+      <div id="sync-banner" class="sync-banner" hidden>
+        <span>⚠️ Modo offline — <strong id="sync-pending-count">0</strong> operações pendentes de sincronização</span>
+      </div>
+
+      <!-- Page Container -->
+      <div id="admin-pages" class="admin-pages">
+        <section class="admin-page admin-page--active" data-page="dashboard">
+          <div id="dashboard-content"></div>
+        </section>
+
+        <section class="admin-page" data-page="pedidos">
+          <div id="pedidos-content">
+            <h2>Pedidos</h2>
+            <p class="admin-page__placeholder">Carregando pedidos...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="assinaturas">
+          <div id="assinaturas-content">
+            <h2>Assinaturas</h2>
+            <p class="admin-page__placeholder">Carregando assinaturas...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="estoque">
+          <div id="estoque-content">
+            <h2>Estoque</h2>
+            <p class="admin-page__placeholder">Carregando estoque...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="caixa">
+          <div id="caixa-content">
+            <h2>Caixa</h2>
+            <p class="admin-page__placeholder">Carregando caixa...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="nf">
+          <div id="nf-content">
+            <h2>Notas Fiscais</h2>
+            <p class="admin-page__placeholder">Carregando notas fiscais...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="produtos">
+          <div id="produtos-content">
+            <h2>Produtos</h2>
+            <p class="admin-page__placeholder">Carregando produtos...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="lojas">
+          <div id="lojas-content">
+            <h2>Lojas</h2>
+            <p class="admin-page__placeholder">Carregando lojas...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="funcionarios">
+          <div id="funcionarios-content">
+            <h2>Funcionários</h2>
+            <p class="admin-page__placeholder">Carregando funcionários...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="clientes">
+          <div id="clientes-content">
+            <h2>Clientes</h2>
+            <p class="admin-page__placeholder">Carregando clientes...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="relatorios">
+          <div id="relatorios-content">
+            <h2>Relatórios</h2>
+            <p class="admin-page__placeholder">Carregando relatórios...</p>
+          </div>
+        </section>
+
+        <section class="admin-page" data-page="config">
+          <div id="config-content">
+            <h2>Configurações</h2>
+            <p class="admin-page__placeholder">Carregando configurações...</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
+
+  <!-- Core JS -->
+  <script src="../js/core/storage.js"></script>
+  <script src="../js/core/state.js"></script>
+  <script src="../js/core/utils.js"></script>
+  <script src="../js/core/auth.js"></script>
+
+  <!-- Data -->
+  <script src="../js/data/products.js"></script>
+  <script src="../js/data/stores.js"></script>
+  <script src="../js/data/categories.js"></script>
+  <script src="../js/data/employees.js"></script>
+
+  <!-- Components -->
+  <script src="../js/components/toast.js"></script>
+
+  <!-- Admin Modules -->
+  <script src="../js/admin/dashboard.js"></script>
+  <script src="../js/admin/pedidos.js"></script>
+  <script src="../js/admin/assinaturas.js"></script>
+  <script src="../js/admin/estoque.js"></script>
+  <script src="../js/admin/caixa.js"></script>
+  <script src="../js/admin/nf.js"></script>
+  <script src="../js/admin/produtos-admin.js"></script>
+  <script src="../js/admin/lojas.js"></script>
+  <script src="../js/admin/funcionarios.js"></script>
+  <script src="../js/admin/clientes.js"></script>
+  <script src="../js/admin/relatorios.js"></script>
+
+  <!-- Admin Bootstrap (must be last) -->
+  <script src="../js/admin/admin-app.js"></script>
+</body>
+</html>

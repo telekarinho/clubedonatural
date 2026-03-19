@@ -57,6 +57,7 @@ const ProductCard = {
     card.dataset.id = product.id;
     card.innerHTML = `
       <div class="product-card__image-wrap">
+        ${product.imagem ? `<img class="product-card__img" src="${product.imagem}" alt="${product.nome}" loading="lazy" onerror="this.style.display='none'">` : ''}
         <div class="product-card__badges">${selosHTML}</div>
         ${recurrenceBadge}
         ${urgencyBadge}

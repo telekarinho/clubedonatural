@@ -256,8 +256,8 @@ const ProductDetail = {
     sheet.innerHTML = `
       <div class="bottom-sheet-handle"></div>
       <div style="flex:1;overflow-y:auto;padding:0 var(--space-4) var(--space-4);-webkit-overflow-scrolling:touch;">
-        <div style="width:100%;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-4);background:linear-gradient(135deg,#a8e6cf 0%,#88d8a8 50%,#69c98e 100%);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:4rem;">
-          ${DataCategories.find(c => c.id === p.categoria)?.icone || '🌿'}
+        <div style="width:100%;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-4);background:linear-gradient(135deg,#a8e6cf 0%,#88d8a8 50%,#69c98e 100%);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:4rem;position:relative;">
+          ${p.imagem && p.imagem.startsWith('http') ? `<img src="${p.imagem}" alt="${p.nome}" style="width:100%;height:100%;object-fit:contain;padding:12px;position:absolute;inset:0;" onerror="this.style.display='none';this.nextElementSibling.style.display=''"><span style="display:none">${DataCategories.find(c => c.id === p.categoria)?.icone || '🌿'}</span>` : (DataCategories.find(c => c.id === p.categoria)?.icone || '🌿')}
         </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-3);">

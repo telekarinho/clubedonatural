@@ -47,6 +47,7 @@ input{font-family:inherit;outline:none}
   width:380px;max-width:90vw;box-shadow:var(--shadow-lg);text-align:center;
 }
 .login-logo{font-size:2rem;font-weight:700;color:var(--primary-dark);margin-bottom:4px}
+.login-logo-img{width:200px;max-width:80%;height:auto;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto}
 .login-sub{font-size:.85rem;color:var(--text-secondary);margin-bottom:32px}
 .login-leaf{font-size:3rem;display:block;margin-bottom:12px}
 .login-field{margin-bottom:16px;text-align:left}
@@ -75,6 +76,7 @@ input{font-family:inherit;outline:none}
 }
 .topbar-logo{font-weight:700;font-size:1.1rem;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .topbar-logo span{color:var(--accent)}
+.topbar-logo-icon{width:32px;height:32px;object-fit:contain;border-radius:4px;background:#fff;padding:2px}
 .topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.2);margin:0 4px}
 .topbar-info{font-size:.8rem;opacity:.85;display:flex;align-items:center;gap:6px}
 .topbar-info .operator-name{font-weight:600;color:var(--accent-light)}
@@ -141,6 +143,7 @@ input{font-family:inherit;outline:none}
 .product-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(45,106,79,.12);transform:translateY(-1px)}
 .product-card:active{transform:scale(.97)}
 .product-card .cat-icon{font-size:1.5rem;margin-bottom:6px}
+.product-card .p-img{width:100%;height:80px;object-fit:contain;border-radius:4px;margin-bottom:6px;background:#f9f9f9}
 .product-card .p-name{font-size:.85rem;font-weight:600;line-height:1.3;margin-bottom:auto;color:var(--text)}
 .product-card .p-price{font-size:1.05rem;font-weight:700;color:var(--primary);margin-top:8px}
 .product-card .p-variations{font-size:.7rem;color:var(--text-light);margin-top:2px}
@@ -588,8 +591,8 @@ input{font-family:inherit;outline:none}
 <!-- ===== LOGIN SCREEN ===== -->
 <div id="loginScreen">
   <div class="login-card">
-    <span class="login-leaf">🌿</span>
-    <div class="login-logo">Clube do <span style="color:var(--accent)">Natural</span></div>
+    <img src="../img/logo-full.png" alt="Clube do Natural" class="login-logo-img">
+    <div class="login-logo" style="display:none">Clube do <span style="color:var(--accent)">Natural</span></div>
     <div class="login-sub">Frente de Caixa — PDV</div>
     <form id="loginForm" autocomplete="off">
       <div class="login-field">
@@ -614,7 +617,7 @@ input{font-family:inherit;outline:none}
 <div id="posApp">
   <!-- Top Bar -->
   <div class="topbar">
-    <div class="topbar-logo">🌿 Clube do <span>Natural</span></div>
+    <div class="topbar-logo"><img src="../img/logo-full.png" alt="" class="topbar-logo-icon"> Clube do <span>Natural</span></div>
     <div class="topbar-divider"></div>
     <div class="topbar-info">
       <span id="storeName">Centro</span> &bull;
@@ -641,10 +644,10 @@ input{font-family:inherit;outline:none}
     <div class="search-bar">
       <div class="search-input-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Buscar produto por nome ou código de barras..." autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Buscar por nome, código de barras ou QR Code..." autocomplete="off">
         <span class="search-kbd">F2</span>
       </div>
-      <button class="btn-scanner" onclick="openScanner()" title="Escanear código de barras">📷 <span class="scanner-label">Scanner</span></button>
+      <button class="btn-scanner" onclick="openScanner()" title="Escanear código de barras ou QR Code">📷 <span class="scanner-label">Scanner</span></button>
     </div>
     <div class="cat-pills" id="catPills">
       <button class="cat-pill active" data-cat="todos">Todos</button>
@@ -809,9 +812,9 @@ input{font-family:inherit;outline:none}
         <button class="btn-scan-close" onclick="stopScanner()">Fechar</button>
       </div>
       <div style="margin-top:12px">
-        <label style="font-size:.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">Ou digite o código manualmente:</label>
+        <label style="font-size:.8rem;color:var(--text-secondary);display:block;margin-bottom:4px">Ou digite o código de barras / URL do QR Code:</label>
         <div style="display:flex;gap:8px">
-          <input type="text" id="manualBarcode" placeholder="Ex: 7891234567001" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.95rem;font-family:monospace">
+          <input type="text" id="manualBarcode" placeholder="Ex: 7891234567001 ou cole URL do QR Code" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.95rem;font-family:monospace">
           <button onclick="searchManualBarcode()" style="padding:10px 16px;background:var(--primary);color:#fff;border-radius:var(--radius);font-weight:600">Buscar</button>
         </div>
       </div>
@@ -894,10 +897,21 @@ const PDV_PRODUCTS = [
   { id:'shampoo-natural', nome:'Shampoo Natural Sem Sulfato', categoria:'higiene', preco:34.90, variacoes:[{peso:'250ml',preco:34.90},{peso:'500ml',preco:59.90}], barcode:'7891234567030' },
   { id:'desodorante-natural', nome:'Desodorante Natural Vegano', categoria:'higiene', preco:24.90, variacoes:[{peso:'50g',preco:24.90}], barcode:'7891234567031' },
   { id:'oleo-essencial', nome:'Óleo Essencial de Lavanda', categoria:'higiene', preco:28.90, variacoes:[{peso:'10ml',preco:28.90},{peso:'30ml',preco:64.90}], barcode:'7891234567032' },
+  // ===== PRODUTOS DA LOJA ONLINE (Shopify) =====
+  { id:'coenzima-q10', nome:'Coenzima Q10 + Vitamina E', categoria:'capsulas', preco:35.99, variacoes:[{peso:'60 caps 350mg',preco:35.99}], barcode:'7891234567033', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage6deago.de2025_11_33_59_1024x.png?v=1754490920', descricao:'Suporte à energia celular, saúde cardiovascular e proteção antioxidante. 100mg de CoQ10 por dose + Vitamina E.' },
+  { id:'clubeleve', nome:'ClubeLeve', categoria:'capsulas', preco:24.99, variacoes:[{peso:'90 caps 500mg',preco:24.99}], barcode:'7891234567034', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage6deago.de2025_11_49_35_1024x.png?v=1754491849', descricao:'Fórmula natural com Quitosana, Spirulina, Psyllium, Inulina (FOS) e Picolinato de Cromo. Auxilia na saciedade e controle metabólico.' },
+  { id:'treonclube-magnesio', nome:'TreonClube Magnésio Treonato', categoria:'capsulas', preco:35.99, variacoes:[{peso:'60 caps 500mg',preco:35.99}], barcode:'7891234567035', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage5deago.de2025_16_54_12_1024x.png?v=1754424093', descricao:'Magnésio Treonato que atravessa a barreira hematoencefálica. Melhora memória, foco, concentração e qualidade do sono.' },
+  { id:'vitamina-b12', nome:'Vitamina B12 (Metilcobalamina)', categoria:'capsulas', preco:34.99, variacoes:[{peso:'60 caps 350mg',preco:34.99}], barcode:'7891234567036', imagem:'https://www.clubedonatural.com/cdn/shop/files/SuplementoVitaminaB12ClubedoNatural_1024x.png?v=1754403167', descricao:'Metilcobalamina pura de alta absorção. Aumenta energia, melhora memória e foco, apoia sistema nervoso e imunológico.' },
+  { id:'oleo-semente-abobora', nome:'Óleo de Semente de Abóbora', categoria:'capsulas', preco:49.99, variacoes:[{peso:'60 caps 1000mg',preco:49.99}], barcode:'7891234567037', imagem:'https://www.clubedonatural.com/cdn/shop/files/OleodeSementedeAbobora_1024x.png?v=1754329754', descricao:'Rico em ácidos graxos essenciais, fitoesteróis e vitamina E. Suporte à saúde da próstata, bexiga e coração.' },
+  { id:'cloreto-magnesio', nome:'Cloreto de Magnésio P.A.', categoria:'capsulas', preco:24.99, variacoes:[{peso:'120 caps 500mg',preco:24.99}], barcode:'7891234567038', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage5deago.de2025_17_08_30_1024x.png?v=1754424523', descricao:'Magnésio P.A. 500mg. Alivia desconfortos musculares e articulares, fortalece ossos e sistema nervoso. 120 cápsulas.' },
+  { id:'curcuma-95', nome:'Cúrcuma 95% Curcuminoides', categoria:'capsulas', preco:29.99, variacoes:[{peso:'60 caps 500mg',preco:29.99}], barcode:'7891234567039', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage5deago.de2025_17_17_11_1024x.png?v=1754425118', descricao:'Extrato padronizado com 95% de curcuminoides. Ação anti-inflamatória, antioxidante, saúde articular e digestiva.' },
+  { id:'colageno-tipo-ii', nome:'Colágeno Tipo II', categoria:'capsulas', preco:29.99, variacoes:[{peso:'30 caps 500mg',preco:29.99}], barcode:'7891234567040', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage28deago.de2025_10_28_46_1024x.png?v=1756387837', descricao:'Colágeno tipo II não desnaturado + ácido hialurônico + vitamina E. Saúde articular, elasticidade da pele e proteção celular.' },
+  { id:'colageno-complex', nome:'Colágeno Complex', categoria:'capsulas', preco:49.99, variacoes:[{peso:'96 caps 500mg',preco:49.99}], barcode:'7891234567041', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage6deago.de2025_12_07_40_1024x.png?v=1754492870', descricao:'Peptídeos bioativos de colágeno + ácido hialurônico + vitamina C. Firmeza da pele, fortalecimento de unhas, cabelos e articulações.' },
+  { id:'az-complex', nome:'A-Z Complex Multivitamínico', categoria:'capsulas', preco:19.99, variacoes:[{peso:'60 caps 500mg',preco:19.99}], barcode:'7891234567042', imagem:'https://www.clubedonatural.com/cdn/shop/files/ChatGPTImage6deago.de2025_11_59_14_1024x.png?v=1754492366', descricao:'Multivitamínico completo de A a Zinco. Fortalece imunidade, previne deficiências nutricionais, mais disposição e bem-estar.' },
 ];
 
-const CAT_ICONS = { graos:'🌾', suplementos:'💪', chas:'🍵', temperos:'🌶️', mel:'🍯', oleos:'🫒', snacks:'🥜', higiene:'🧴' };
-const CAT_LABELS = { graos:'Grãos & Cereais', suplementos:'Suplementos', chas:'Chás & Infusões', temperos:'Temperos', mel:'Mel & Derivados', oleos:'Óleos Naturais', snacks:'Snacks Saudáveis', higiene:'Higiene Natural' };
+const CAT_ICONS = { graos:'🌾', suplementos:'💪', chas:'🍵', temperos:'🌶️', mel:'🍯', oleos:'🫒', snacks:'🥜', higiene:'🧴', capsulas:'💊' };
+const CAT_LABELS = { graos:'Grãos & Cereais', suplementos:'Suplementos', chas:'Chás & Infusões', temperos:'Temperos', mel:'Mel & Derivados', oleos:'Óleos Naturais', snacks:'Snacks Saudáveis', higiene:'Higiene Natural', capsulas:'Cápsulas Naturais' };
 
 const EMPLOYEES = [
   { nome:'Maria Souza', cargo:'caixa', phone:'(11) 99999-0004', senha:'caixa123' },
@@ -1095,10 +1109,18 @@ function renderProducts() {
 
   if (activeCat !== 'todos') prods = prods.filter(p => p.categoria === activeCat);
   if (search) {
-    prods = prods.filter(p =>
-      normalizeStr(p.nome).includes(search) ||
-      p.barcode.includes(search)
-    );
+    // Check if pasted/typed a QR Code URL (e.g. https://clubedonatural.vercel.app/catalogo?produto=chia-sementes)
+    const qrUrlMatch = search.match(/[?&]produto=([^&]+)/i) || search.match(/produto=([^&\s]+)/i);
+    if (qrUrlMatch) {
+      const pid = qrUrlMatch[1];
+      prods = prods.filter(p => p.id === pid);
+    } else {
+      prods = prods.filter(p =>
+        normalizeStr(p.nome).includes(search) ||
+        p.barcode.includes(search) ||
+        p.id.includes(search)
+      );
+    }
   }
 
   if (prods.length === 0) {
@@ -1108,7 +1130,8 @@ function renderProducts() {
 
   grid.innerHTML = prods.map(p => `
     <div class="product-card" onclick="selectProduct('${p.id}')">
-      <span class="cat-icon">${CAT_ICONS[p.categoria] || '📦'}</span>
+      ${p.imagem ? `<img class="p-img" src="${p.imagem}" alt="${p.nome}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+      <span class="cat-icon" style="display:none">${CAT_ICONS[p.categoria] || '📦'}</span>` : `<span class="cat-icon">${CAT_ICONS[p.categoria] || '📦'}</span>`}
       <span class="p-name">${p.nome}</span>
       <span class="p-price">${fmt(p.preco)}</span>
       <span class="p-variations">${p.variacoes.length > 1 ? p.variacoes.length + ' variações' : p.variacoes[0].peso}</span>
@@ -1117,6 +1140,57 @@ function renderProducts() {
 }
 
 document.getElementById('searchInput').addEventListener('input', renderProducts);
+
+// When Enter is pressed on search, if there's an exact barcode/QR match, add directly
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = this.value.trim();
+    if (!val) return;
+
+    // Check if it's a QR Code URL
+    const qrMatch = val.match(/[?&]produto=([^&]+)/i);
+    if (qrMatch) {
+      const product = PDV_PRODUCTS.find(p => p.id === qrMatch[1]);
+      if (product) {
+        this.value = '';
+        renderProducts();
+        if (product.variacoes.length === 1) addToCart(product, product.variacoes[0]);
+        else showVariationPicker(product);
+        return;
+      }
+    }
+
+    // Check exact barcode match (physical barcode scanner sends code + Enter)
+    const byBarcode = PDV_PRODUCTS.find(p => p.barcode === val);
+    if (byBarcode) {
+      this.value = '';
+      renderProducts();
+      if (byBarcode.variacoes.length === 1) addToCart(byBarcode, byBarcode.variacoes[0]);
+      else showVariationPicker(byBarcode);
+      return;
+    }
+
+    // Check exact product ID match
+    const byId = PDV_PRODUCTS.find(p => p.id === val);
+    if (byId) {
+      this.value = '';
+      renderProducts();
+      if (byId.variacoes.length === 1) addToCart(byId, byId.variacoes[0]);
+      else showVariationPicker(byId);
+      return;
+    }
+
+    // If only one product visible, select it
+    const grid = document.getElementById('productsGrid');
+    const cards = grid.querySelectorAll('.product-card');
+    if (cards.length === 1) {
+      cards[0].click();
+      this.value = '';
+      renderProducts();
+    }
+  }
+});
 
 // ===== PRODUCT SELECTION =====
 function selectProduct(id) {
@@ -1767,21 +1841,39 @@ let qrScannerInterval = null;
 
 function startQRScanner() {
   // Use native BarcodeDetector API if available (Chrome/Edge/Android)
+  // Detects BOTH QR Codes (etiquetas) AND barcodes (código de barras)
   if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    const video = document.querySelector('#scannerViewport video');
-    if (!video) return;
+    const formats = ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar'];
+    BarcodeDetector.getSupportedFormats().then(supported => {
+      const useFormats = formats.filter(f => supported.includes(f));
+      if (useFormats.length === 0) return;
+      const detector = new BarcodeDetector({ formats: useFormats });
+      const video = document.querySelector('#scannerViewport video');
+      if (!video) return;
 
-    qrScannerInterval = setInterval(async () => {
-      if (!scannerActive || !video.videoWidth) return;
-      try {
-        const barcodes = await detector.detect(video);
-        if (barcodes.length > 0) {
-          const code = barcodes[0].rawValue;
-          handleQROrBarcode(code);
-        }
-      } catch(e) {}
-    }, 500);
+      qrScannerInterval = setInterval(async () => {
+        if (!scannerActive || !video.videoWidth) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            handleQROrBarcode(code);
+          }
+        } catch(e) {}
+      }, 400);
+    }).catch(() => {
+      // Fallback: try with just qr_code
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      const video = document.querySelector('#scannerViewport video');
+      if (!video) return;
+      qrScannerInterval = setInterval(async () => {
+        if (!scannerActive || !video.videoWidth) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) handleQROrBarcode(barcodes[0].rawValue);
+        } catch(e) {}
+      }, 400);
+    });
   }
 }
 
@@ -2069,12 +2161,7 @@ function generateLabels() {
     html += `
       <div class="product-label">
         <div class="label-header">
-          <svg class="label-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 8C20 8 12 12 12 20C12 24 14 27 17 29" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M20 8C20 8 28 12 28 20C28 24 26 27 23 29" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M20 8V32" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M15 16C15 16 18 18 20 14C22 18 25 16 25 16" stroke="#C4972A" stroke-width="2" stroke-linecap="round"/>
-          </svg>
+          <img class="label-logo" src="../img/logo-icon.svg" alt="" style="filter:brightness(10)">
           <div class="label-brand">Clube do <span>Natural</span></div>
         </div>
         <div class="label-body">

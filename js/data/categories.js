@@ -59,4 +59,11 @@ const DataCategories = [
     descricao: 'Sabonetes, shampoos, desodorantes naturais',
     cor: '#00695C',
   },
+  {
+    id: 'capsulas',
+    nome: 'C\u00e1psulas Naturais',
+    icone: '\uD83D\uDC8A',
+    descricao: 'Suplementos em c\u00e1psulas — CoQ10, magn\u00e9sio, col\u00e1geno, vitaminas',
+    cor: '#6A1B9A',
+  },
 ];

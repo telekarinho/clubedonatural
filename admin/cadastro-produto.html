@@ -336,7 +336,7 @@ input[type=file]{display:none}
           3. Copie a chave e cole abaixo — é 100% grátis
         </p>
         <div class="key-input-row">
-          <input type="password" id="gemini-api-key" placeholder="Cole sua chave aqui (AIza...)">
+          <input type="password" id="gemini-api-key" placeholder="Cole sua chave aqui">
           <button class="btn btn--primary btn--sm" id="btn-save-key">Salvar</button>
         </div>
         <div id="key-status"></div>
@@ -1105,6 +1105,211 @@ const App = {
     }
   },
 
+  // === SMART OCR (OCR + knowledge base for natural products) ===
+  async startSmartOCR() {
+    this.goToStep(2);
+    const progressBar = document.getElementById('ocr-progress-bar');
+    const statusText = document.getElementById('ocr-status-text');
+    const rawTextDiv = document.getElementById('ocr-raw-text');
+
+    document.querySelector('#ocr-status h4').textContent = '🔍 Análise Inteligente Local';
+    statusText.textContent = 'Reconhecendo texto na imagem...';
+    progressBar.style.width = '10%';
+
+    try {
+      const canvas = document.getElementById('photo-canvas');
+      progressBar.style.width = '20%';
+
+      const result = await Tesseract.recognize(canvas, 'por', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            progressBar.style.width = Math.round(20 + m.progress * 50) + '%';
+            statusText.textContent = `Reconhecendo texto... ${Math.round(m.progress * 100)}%`;
+          }
+        }
+      });
+
+      progressBar.style.width = '75%';
+      statusText.textContent = 'Gerando informações inteligentes...';
+
+      this.extractedText = result.data.text;
+      rawTextDiv.textContent = this.extractedText;
+      rawTextDiv.style.display = 'block';
+
+      // First do normal OCR parse
+      this.parseOCRText(this.extractedText);
+
+      // Then enrich with knowledge base
+      progressBar.style.width = '90%';
+      statusText.textContent = 'Enriquecendo com base de conhecimento...';
+      this.enrichWithKnowledgeBase();
+
+      progressBar.style.width = '100%';
+      statusText.textContent = 'Dados extraídos e enriquecidos com sucesso!';
+
+      const formTitle = document.querySelector('#sec-form .form-card h3');
+      if (formTitle && !formTitle.querySelector('.ai-generated-badge')) {
+        formTitle.insertAdjacentHTML('beforeend', '<span class="ai-generated-badge">🔍 Análise Local</span>');
+      }
+
+      setTimeout(() => {
+        this.goToStep(3);
+        this.toast('Dados extraídos! Revise e complete as informações.');
+      }, 800);
+
+    } catch (err) {
+      statusText.textContent = 'Erro: ' + err.message;
+      progressBar.style.width = '0';
+      console.error('SmartOCR Error:', err);
+      setTimeout(() => this.goToStep(3), 2000);
+    }
+  },
+
+  // Knowledge base for common natural products
+  productKnowledgeBase: {
+    'chia': {
+      beneficios: ['Rica em Ômega-3 — mais que o salmão', 'Alto teor de fibras — aumenta saciedade', 'Fonte de cálcio, ferro e magnésio', 'Auxilia no controle do colesterol'],
+      comoUsar: ['Adicione 1 colher em sucos e vitaminas', 'Misture no iogurte e deixe hidratar 15min', 'Pudim de chia: 3 col. + 200ml leite vegetal', 'Use em receitas de pão integral'],
+      curiosidade: 'Os guerreiros Astecas usavam chia como alimento de resistência em longas batalhas — uma colher sustentava um guerreiro por 24h!',
+      contraindicacoes: 'Pessoas com diverticulite devem consultar médico antes de consumir.'
+    },
+    'linhaça': {
+      beneficios: ['Maior fonte vegetal de Ômega-3', 'Rica em lignanas — antioxidante natural', 'Auxilia no funcionamento intestinal', 'Ajuda no controle hormonal feminino'],
+      comoUsar: ['Triture na hora para melhor absorção', 'Adicione 1 colher em sucos e vitaminas', 'Misture em massas de pão e bolo', 'Substitui ovo em receitas veganas (1 col. + 3 col. água)'],
+      curiosidade: 'A linhaça é cultivada há mais de 6.000 anos e era tão valiosa no Império Romano que Carlos Magno criou leis obrigando o consumo!',
+      contraindicacoes: 'Consumir com bastante água. Gestantes devem consultar médico.'
+    },
+    'quinoa': {
+      beneficios: ['Proteína completa — todos os aminoácidos essenciais', 'Sem glúten — ideal para celíacos', 'Rica em ferro, magnésio e vitaminas B', 'Baixo índice glicêmico'],
+      comoUsar: ['Lave bem para remover saponinas (amargor)', 'Cozinhe como arroz: 1 xíc quinoa + 2 xíc água', 'Adicione em saladas e sopas', 'Use a farinha em bolos e panquecas'],
+      curiosidade: 'A NASA escolheu a quinoa como alimento ideal para viagens espaciais longas por seu perfil nutricional completo!',
+      contraindicacoes: 'Contém oxalatos — pessoas com cálculo renal devem moderar consumo.'
+    },
+    'aveia': {
+      beneficios: ['Rica em beta-glucana — reduz colesterol', 'Alto teor de fibras solúveis', 'Fornece energia de liberação lenta', 'Auxilia no controle da glicemia'],
+      comoUsar: ['Mingau: 3 col. + leite quente, mexa até engrossar', 'Adicione em vitaminas e smoothies', 'Use em receitas de panqueca e bolo', 'Overnight oats: aveia + leite na geladeira de um dia pro outro'],
+      curiosidade: 'A aveia é o único cereal que quanto mais processado (flocos), mais rápido o corpo absorve a beta-glucana que reduz colesterol!',
+      contraindicacoes: 'Celíacos devem usar aveia certificada sem glúten (contaminação cruzada).'
+    },
+    'granola': {
+      beneficios: ['Mix energético de cereais e castanhas', 'Rica em fibras e vitaminas do complexo B', 'Fonte de energia de liberação gradual', 'Auxilia no funcionamento intestinal'],
+      comoUsar: ['Adicione ao iogurte ou açaí', 'Coma com frutas frescas no café da manhã', 'Use como topping em smoothie bowls', 'Misture com mel para um snack rápido'],
+      curiosidade: 'A granola foi inventada em 1863 nos EUA como alimento saudável para pacientes de um sanatório — hoje é a queridinha do café da manhã fitness!',
+      contraindicacoes: 'Verifique o teor de açúcar — muitas granolas industriais têm mais açúcar que chocolate.'
+    },
+    'castanha': {
+      beneficios: ['Rica em selênio — poderoso antioxidante', 'Fonte de gorduras boas para o coração', 'Auxilia na função da tireoide', 'Melhora o sistema imunológico'],
+      comoUsar: ['Coma 1-2 unidades por dia (castanha-do-pará)', 'Adicione picada em saladas', 'Triture para fazer leite de castanha', 'Use em receitas de bolos e doces fit'],
+      curiosidade: 'Apenas 1 castanha-do-pará fornece 100% da necessidade diária de selênio — é o alimento mais rico nesse mineral no mundo!',
+      contraindicacoes: 'Não exceda 3 unidades/dia de castanha-do-pará — excesso de selênio pode ser tóxico.'
+    },
+    'mel': {
+      beneficios: ['Antibacteriano e anti-inflamatório natural', 'Fonte de energia rápida e natural', 'Auxilia na cicatrização e imunidade', 'Rico em antioxidantes e enzimas'],
+      comoUsar: ['Adoce bebidas quentes (chá, leite)', 'Use como substituto do açúcar em receitas', 'Tome 1 colher em jejum para imunidade', 'Combine com limão para gripes'],
+      curiosidade: 'Mel nunca estraga! Arqueólogos encontraram mel em tumbas egípcias de 3.000 anos atrás — e ainda estava próprio para consumo!',
+      contraindicacoes: 'NUNCA dar mel para crianças menores de 1 ano — risco de botulismo.'
+    },
+    'cúrcuma': {
+      beneficios: ['Poderoso anti-inflamatório (curcumina)', 'Antioxidante natural', 'Auxilia na digestão', 'Pode ajudar na prevenção de doenças crônicas'],
+      comoUsar: ['Golden milk: 1 col. chá + leite vegetal quente + pimenta', 'Adicione em arroz, sopas e molhos', 'Misture com pimenta-do-reino para melhor absorção', 'Use em smoothies com gengibre'],
+      curiosidade: 'A curcumina da cúrcuma tem mais de 12.000 estudos científicos publicados — é uma das substâncias naturais mais pesquisadas do mundo!',
+      contraindicacoes: 'Quem usa anticoagulantes deve consultar médico. Pode manchar roupas e superfícies.'
+    },
+    'gengibre': {
+      beneficios: ['Anti-inflamatório e analgésico natural', 'Combate náuseas e enjoos', 'Acelera o metabolismo (termogênico)', 'Fortalece o sistema imunológico'],
+      comoUsar: ['Chá: fatias finas em água fervente por 10min', 'Rale fresco em sucos e vitaminas', 'Use em pó como tempero em receitas', 'Shot matinal: gengibre + limão + mel'],
+      curiosidade: 'Na Idade Média, o gengibre era tão valioso na Europa que 500g custavam o equivalente ao preço de uma ovelha!',
+      contraindicacoes: 'Evitar em excesso na gravidez. Hipertensos devem moderar o consumo.'
+    },
+    'colágeno': {
+      beneficios: ['Melhora elasticidade e firmeza da pele', 'Fortalece unhas e cabelos', 'Auxilia na saúde das articulações', 'Ajuda na prevenção de rugas'],
+      comoUsar: ['Dissolva 10g em água ou suco pela manhã', 'Adicione em café, chá ou vitaminas', 'Tome diariamente para resultados em 30-90 dias', 'Combine com vitamina C para melhor absorção'],
+      curiosidade: 'A partir dos 25 anos, o corpo reduz a produção de colágeno em 1% ao ano — por isso a suplementação faz diferença visível!',
+      contraindicacoes: 'Pessoas com alergia a frutos do mar devem verificar a origem (colágeno marinho).'
+    },
+    'whey': {
+      beneficios: ['Proteína de alta qualidade e rápida absorção', 'Auxilia no ganho e manutenção de massa muscular', 'Rico em aminoácidos essenciais (BCAAs)', 'Aumenta a saciedade'],
+      comoUsar: ['Bata 1 scoop (30g) com água ou leite', 'Tome até 30min após o treino', 'Adicione em receitas de panqueca e crepioca', 'Use em vitaminas com frutas'],
+      curiosidade: 'Whey protein vem do soro do leite — o líquido que sobra na fabricação do queijo. Antes era descartado, até descobrirem seu valor nutricional!',
+      contraindicacoes: 'Intolerantes à lactose devem optar por whey isolado. Alérgicos ao leite devem evitar.'
+    },
+    'própolis': {
+      beneficios: ['Antibacteriano e antiviral natural', 'Fortalece o sistema imunológico', 'Anti-inflamatório para garganta e boca', 'Rico em flavonoides antioxidantes'],
+      comoUsar: ['Pingue 10-15 gotas em água ou suco', 'Spray bucal: aplique na garganta irritada', 'Tome diariamente para prevenção', 'Use externamente em pequenos ferimentos'],
+      curiosidade: 'As abelhas usam própolis para esterilizar a colmeia — funciona tão bem que múmias de insetos invasores ficam perfeitamente preservadas dentro dela!',
+      contraindicacoes: 'Alérgicos a produtos de abelha devem evitar. Crianças menores de 1 ano não devem consumir.'
+    },
+    'óleo de coco': {
+      beneficios: ['Rico em ácido láurico — antimicrobiano', 'Fonte de energia rápida (TCM)', 'Versátil: uso culinário e cosmético', 'Auxilia no metabolismo'],
+      comoUsar: ['Substitua óleos de cozinha para fritar e refogar', 'Use como hidratante para pele e cabelo', 'Adicione 1 col. no café (bulletproof coffee)', 'Use como demaquilante natural'],
+      curiosidade: 'Populações do Pacífico Sul que consomem óleo de coco diariamente têm as menores taxas de doenças cardíacas do mundo!',
+      contraindicacoes: 'Rico em gordura saturada — use com moderação se tiver colesterol alto.'
+    },
+    'matchá': {
+      beneficios: ['10x mais antioxidantes que chá verde comum', 'Energia sustentada sem pico de cafeína (L-teanina)', 'Acelera o metabolismo', 'Melhora foco e concentração'],
+      comoUsar: ['Bata 1 col. chá em 60ml de água quente (80°C)', 'Matchá latte: bata com leite vegetal espumado', 'Adicione em smoothies e vitaminas', 'Use em receitas de bolo e sorvete'],
+      curiosidade: 'Monges budistas japoneses bebem matchá há 900 anos para meditar por horas — a L-teanina promove calma focada sem sonolência!',
+      contraindicacoes: 'Contém cafeína — evitar à noite. Gestantes devem limitar a 1 xícara/dia.'
+    },
+    'açaí': {
+      beneficios: ['Superfruta rica em antocianinas (antioxidante)', 'Fonte de energia e gorduras boas', 'Rico em fibras e minerais', 'Auxilia na saúde cardiovascular'],
+      comoUsar: ['Bata o polpa congelada com banana', 'Sirva em bowl com granola e frutas', 'Smoothie: açaí + banana + leite vegetal', 'Consuma puro como suco energético'],
+      curiosidade: 'O açaí é tão importante no Pará que durante a safra o preço do camarão sobe — porque os pescadores preferem colher açaí!',
+      contraindicacoes: 'Alto valor calórico — consumir com moderação em dietas restritivas.'
+    },
+    'vitamina c': {
+      beneficios: ['Fortalece o sistema imunológico', 'Poderoso antioxidante contra radicais livres', 'Essencial para produção de colágeno', 'Melhora a absorção de ferro'],
+      comoUsar: ['Tome 1 comprimido efervescente em água', 'Tome pela manhã com o café da manhã', 'Combine com zinco em períodos de gripe', 'Suplementação diária de 500-1000mg'],
+      curiosidade: 'Marinheiros britânicos ganharam o apelido "limeys" porque a Marinha Real obrigava o consumo de limão para prevenir escorbuto em alto mar!',
+      contraindicacoes: 'Doses muito altas (>2000mg/dia) podem causar distúrbios intestinais e cálculos renais.'
+    }
+  },
+
+  enrichWithKnowledgeBase() {
+    const nome = (document.getElementById('f-nome').value || '').toLowerCase();
+    const categoria = document.getElementById('f-categoria').value;
+    const fullText = (this.extractedText || '').toLowerCase();
+    const combined = nome + ' ' + fullText;
+
+    // Find matching product in knowledge base
+    let matchedKey = null;
+    let bestMatch = 0;
+    for (const key of Object.keys(this.productKnowledgeBase)) {
+      const regex = new RegExp(key.replace(/\s+/g, '\\s*'), 'i');
+      if (regex.test(combined)) {
+        if (key.length > bestMatch) {
+          bestMatch = key.length;
+          matchedKey = key;
+        }
+      }
+    }
+
+    if (!matchedKey) return;
+
+    const kb = this.productKnowledgeBase[matchedKey];
+    const setIfEmpty = (id, value) => {
+      const el = document.getElementById(id);
+      if (el && (!el.value || el.value.trim() === '')) {
+        el.value = value;
+        el.classList.add('auto-filled');
+      }
+    };
+
+    if (kb.beneficios) setIfEmpty('f-beneficios', kb.beneficios.join('\n'));
+    if (kb.comoUsar) setIfEmpty('f-como-usar', kb.comoUsar.join('\n'));
+    if (kb.curiosidade) setIfEmpty('f-curiosidade', kb.curiosidade);
+    if (kb.contraindicacoes) setIfEmpty('f-contraindicacoes', kb.contraindicacoes);
+
+    // Generate description if empty
+    const descEl = document.getElementById('f-descricao');
+    if (descEl && (!descEl.value || descEl.value.startsWith('Ingredientes:'))) {
+      const nomeDisplay = document.getElementById('f-nome').value || matchedKey;
+      const beneficiosShort = (kb.beneficios || []).slice(0, 2).join(', ').toLowerCase();
+      descEl.value = `${nomeDisplay} — produto natural de alta qualidade. ${beneficiosShort.charAt(0).toUpperCase() + beneficiosShort.slice(1)}. Ideal para quem busca uma alimentação saudável e equilibrada.`;
+      descEl.classList.add('auto-filled');
+    }
+  },
+
   // === API KEY ===
   checkApiKey() {
     const key = localStorage.getItem('cdn_gemini_key');
@@ -1118,8 +1323,8 @@ const App = {
 
   saveApiKey() {
     const key = document.getElementById('gemini-api-key').value.trim();
-    if (!key || !key.startsWith('AIza')) {
-      document.getElementById('key-status').innerHTML = '<span style="color:var(--danger);font-size:13px">Chave inválida. Deve começar com "AIza..."</span>';
+    if (!key || key.length < 20) {
+      document.getElementById('key-status').innerHTML = '<span style="color:var(--danger);font-size:13px">Chave inválida. Cole a chave completa do Google AI Studio.</span>';
       return;
     }
     localStorage.setItem('cdn_gemini_key', key);
@@ -1253,10 +1458,13 @@ Responda em português brasileiro.`;
         localStorage.removeItem('cdn_gemini_key');
         this.geminiKey = '';
         document.getElementById('ai-key-setup').style.display = '';
+      } else if (err.message.includes('429') || err.message.includes('quota') || err.message.includes('RESOURCE_EXHAUSTED')) {
+        statusText.textContent = 'Cota da IA esgotada. Usando análise inteligente local...';
+        setTimeout(() => this.startSmartOCR(), 1500);
+        return;
       } else {
-        statusText.textContent = `Erro: ${err.message}. Tentando OCR como fallback...`;
-        // Fallback to OCR
-        setTimeout(() => this.startOCR(), 1500);
+        statusText.textContent = `Erro: ${err.message}. Usando análise local...`;
+        setTimeout(() => this.startSmartOCR(), 1500);
         return;
       }
     }

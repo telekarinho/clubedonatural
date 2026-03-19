@@ -127,9 +127,16 @@
         return doc.data();
       }
 
-      // First time user — check if this is the FIRST user ever (auto-admin)
-      const usersSnap = await CdnFirebase.db.collection('users').limit(1).get();
-      const isFirstUser = usersSnap.empty;
+      // First time user — check meta/init to see if system was already initialized
+      let isFirstUser = false;
+      try {
+        const initDoc = await CdnFirebase.db.collection('meta').doc('init').get();
+        isFirstUser = !initDoc.exists;
+      } catch (e) {
+        // If meta/init read fails, assume system not initialized (first user)
+        console.warn('[Auth] Cannot read meta/init, assuming first user:', e.code);
+        isFirstUser = true;
+      }
 
       const userData = {
         uid: user.uid,
@@ -145,6 +152,16 @@
       await docRef.set(userData);
 
       if (isFirstUser) {
+        // Mark system as initialized so next users become "pendente"
+        try {
+          await CdnFirebase.db.collection('meta').doc('init').set({
+            dono: user.uid,
+            email: user.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (e) {
+          console.warn('[Auth] Could not create meta/init:', e.code);
+        }
         console.log('[Auth] First user — auto-approved as DONO (admin)');
       }
 

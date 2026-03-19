@@ -34,6 +34,8 @@
     config: config,
 
     init() {
+      if (this.ready) return true;
+
       if (!config.apiKey || !config.projectId) {
         console.warn('[Firebase] Config não encontrada. Acesse /admin/setup.html para configurar.');
         return false;
@@ -48,12 +50,8 @@
         this.auth = firebase.auth();
         this.db = firebase.firestore();
 
-        // Enable offline persistence
-        this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-          if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
-            console.warn('[Firestore] Persistence error:', err.code);
-          }
-        });
+        // Enable offline persistence (must be called before any other Firestore call)
+        this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
         this.ready = true;
         console.log('[Firebase] Initialized OK — project:', config.projectId);

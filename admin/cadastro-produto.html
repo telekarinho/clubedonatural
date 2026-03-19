@@ -154,8 +154,15 @@ input[type=file]{display:none}
 .video-section{background:var(--card);border-radius:var(--radius);padding:24px;margin-top:20px;box-shadow:var(--shadow);text-align:center}
 .video-section h3{font-size:16px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px}
 .video-section p{color:var(--text-md);font-size:13px;margin-bottom:16px}
+.video-provider-tabs{display:flex;gap:4px;margin-bottom:20px;background:rgba(0,0,0,.04);border-radius:var(--radius-sm);padding:4px;max-width:400px;margin-left:auto;margin-right:auto}
+.video-provider-tab{flex:1;padding:10px 16px;border-radius:var(--radius-xs);font-size:13px;font-weight:600;border:none;cursor:pointer;transition:.2s;background:transparent;color:var(--text-md)}
+.video-provider-tab.active{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.video-provider-tab:hover:not(.active){background:rgba(255,255,255,.5)}
+.video-provider-info{font-size:12px;color:var(--text-lt);margin-bottom:16px;padding:8px 16px;background:rgba(0,0,0,.02);border-radius:var(--radius-xs);display:inline-block}
 .video-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border-radius:var(--radius-sm);font-size:15px;font-weight:700;border:none;cursor:pointer;transition:.2s;background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff}
 .video-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(123,31,162,.3)}
+.video-btn.ltx-style{background:linear-gradient(135deg,#1565c0,#42a5f5)}
+.video-btn.ltx-style:hover{box-shadow:0 4px 20px rgba(21,101,192,.3)}
 .video-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .video-preview{margin-top:16px;border-radius:var(--radius-sm);overflow:hidden;background:#000;max-width:400px;margin-left:auto;margin-right:auto}
 .video-preview video{width:100%;display:block}
@@ -168,6 +175,13 @@ input[type=file]{display:none}
 .video-key-setup input{flex:1;padding:10px 14px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:13px;font-family:monospace}
 .video-download{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius-xs);background:var(--primary);color:#fff;text-decoration:none;font-size:13px;font-weight:600;margin-top:8px;transition:.2s}
 .video-download:hover{background:var(--primary-md)}
+.ltx-prompt-area{text-align:left;margin:12px 0}
+.ltx-prompt-area label{font-size:12px;font-weight:600;color:var(--text-md);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
+.ltx-prompt-area textarea{width:100%;padding:10px 14px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;min-height:80px;transition:.2s}
+.ltx-prompt-area textarea:focus{outline:none;border-color:var(--primary-lt);box-shadow:0 0 0 3px rgba(82,183,136,.15)}
+.ltx-options{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+.ltx-options select,.ltx-options input[type=number]{padding:8px 12px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:13px;font-family:inherit}
+.ltx-options label{font-size:12px;font-weight:600;color:var(--text-md);display:flex;flex-direction:column;gap:4px;align-items:center}
 
 /* === TOAST === */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--primary);color:#fff;padding:12px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);z-index:9999;transition:.4s;opacity:0;pointer-events:none}
@@ -529,9 +543,58 @@ input[type=file]{display:none}
     <!-- Video Avatar Section -->
     <div class="video-section" id="video-section">
       <h3>🎬 Gerar Vídeo de Apresentação</h3>
-      <p>Um avatar profissional apresenta seu produto em vídeo — perfeito para redes sociais e WhatsApp</p>
-      <div class="video-script" id="video-script"></div>
-      <button class="video-btn" id="btn-gen-video">🎬 Gerar Vídeo com Avatar</button>
+      <p>Escolha entre avatar falante (D-ID) ou vídeo cinematográfico do produto (LTX Studio)</p>
+
+      <!-- Provider Tabs -->
+      <div class="video-provider-tabs">
+        <button class="video-provider-tab active" data-provider="did" onclick="App.switchVideoProvider('did')">🧑 D-ID Avatar</button>
+        <button class="video-provider-tab" data-provider="ltx" onclick="App.switchVideoProvider('ltx')">🎥 LTX Studio</button>
+      </div>
+
+      <!-- D-ID Panel -->
+      <div id="panel-did">
+        <div class="video-provider-info">Avatar falante apresenta o produto — 5 min grátis (único)</div>
+        <div class="video-script" id="video-script"></div>
+        <button class="video-btn" id="btn-gen-video">🎬 Gerar Vídeo com Avatar</button>
+      </div>
+
+      <!-- LTX Panel -->
+      <div id="panel-ltx" style="display:none">
+        <div class="video-provider-info">Vídeo cinematográfico do produto com IA — 800 créditos grátis (único)</div>
+        <div class="ltx-prompt-area">
+          <label>Prompt do vídeo (gerado pela IA)</label>
+          <textarea id="ltx-prompt" rows="3" placeholder="Descreva o vídeo que deseja gerar..."></textarea>
+        </div>
+        <div class="ltx-options">
+          <label>Duração
+            <select id="ltx-duration">
+              <option value="4">4 seg</option>
+              <option value="6">6 seg</option>
+              <option value="8" selected>8 seg</option>
+              <option value="10">10 seg</option>
+            </select>
+          </label>
+          <label>Resolução
+            <select id="ltx-resolution">
+              <option value="1080x1920">Vertical (9:16)</option>
+              <option value="1920x1080" selected>Horizontal (16:9)</option>
+              <option value="1080x1080">Quadrado (1:1)</option>
+            </select>
+          </label>
+          <label>Câmera
+            <select id="ltx-camera">
+              <option value="">Automático</option>
+              <option value="dolly_in">Dolly In (aproxima)</option>
+              <option value="dolly_out">Dolly Out (afasta)</option>
+              <option value="static">Estático</option>
+              <option value="jib_up">Jib Up (sobe)</option>
+              <option value="jib_down">Jib Down (desce)</option>
+            </select>
+          </label>
+        </div>
+        <button class="video-btn ltx-style" id="btn-gen-ltx">🎥 Gerar Vídeo LTX</button>
+      </div>
+
       <div class="video-status" id="video-status"></div>
       <div class="video-preview" id="video-preview" style="display:none">
         <video id="video-player" controls></video>
@@ -551,6 +614,21 @@ input[type=file]{display:none}
           <button class="btn btn--primary btn--sm" id="btn-save-did-key">Salvar</button>
         </div>
         <div id="did-key-status"></div>
+      </div>
+
+      <!-- LTX Key Setup -->
+      <div class="video-key-setup" id="ltx-key-setup" style="display:none">
+        <h4>🔑 Configurar LTX Studio (800 créditos grátis)</h4>
+        <p>
+          1. Crie conta grátis em <a href="https://console.ltx.video" target="_blank" style="color:var(--primary);font-weight:600">console.ltx.video</a><br>
+          2. Vá em Developer Console → Create API Key<br>
+          3. Cole a chave abaixo — 800 créditos grátis para começar
+        </p>
+        <div class="key-input-row">
+          <input type="password" id="ltx-api-key" placeholder="Cole sua chave LTX aqui">
+          <button class="btn btn--primary btn--sm" id="btn-save-ltx-key">Salvar</button>
+        </div>
+        <div id="ltx-key-status"></div>
       </div>
     </div>
   </div>
@@ -1154,8 +1232,10 @@ Responda em português brasileiro.`;
     }
   },
 
-  // === VIDEO AVATAR (D-ID) ===
+  // === VIDEO (D-ID + LTX) ===
   didKey: localStorage.getItem('cdn_did_key') || '',
+  ltxKey: localStorage.getItem('cdn_ltx_key') || '',
+  videoProvider: 'did',
 
   initVideo() {
     // Check D-ID key
@@ -1163,7 +1243,12 @@ Responda em português brasileiro.`;
       document.getElementById('did-key-setup').style.display = '';
     }
 
-    // Save key button
+    // Check LTX key
+    if (!this.ltxKey) {
+      document.getElementById('ltx-key-setup').style.display = 'none'; // hidden until LTX tab selected
+    }
+
+    // Save D-ID key button
     document.getElementById('btn-save-did-key').onclick = () => {
       const key = document.getElementById('did-api-key').value.trim();
       if (!key) return;
@@ -1174,8 +1259,62 @@ Responda em português brasileiro.`;
       this.toast('Chave D-ID salva!');
     };
 
-    // Generate video button
+    // Save LTX key button
+    document.getElementById('btn-save-ltx-key').onclick = () => {
+      const key = document.getElementById('ltx-api-key').value.trim();
+      if (!key) return;
+      localStorage.setItem('cdn_ltx_key', key);
+      this.ltxKey = key;
+      document.getElementById('ltx-key-setup').style.display = 'none';
+      document.getElementById('ltx-key-status').innerHTML = '<span class="ai-key-saved">✅ Chave salva!</span>';
+      this.toast('Chave LTX salva!');
+    };
+
+    // Generate video buttons
     document.getElementById('btn-gen-video').onclick = () => this.generateVideo();
+    document.getElementById('btn-gen-ltx').onclick = () => this.generateLTXVideo();
+  },
+
+  switchVideoProvider(provider) {
+    this.videoProvider = provider;
+    document.querySelectorAll('.video-provider-tab').forEach(t => t.classList.toggle('active', t.dataset.provider === provider));
+    document.getElementById('panel-did').style.display = provider === 'did' ? '' : 'none';
+    document.getElementById('panel-ltx').style.display = provider === 'ltx' ? '' : 'none';
+
+    // Reset shared elements
+    document.getElementById('video-status').textContent = '';
+    document.getElementById('video-preview').style.display = 'none';
+    document.getElementById('video-download-wrap').style.display = 'none';
+
+    // Show appropriate key setup
+    if (provider === 'did') {
+      document.getElementById('did-key-setup').style.display = this.didKey ? 'none' : '';
+      document.getElementById('ltx-key-setup').style.display = 'none';
+    } else {
+      document.getElementById('ltx-key-setup').style.display = this.ltxKey ? 'none' : '';
+      document.getElementById('did-key-setup').style.display = 'none';
+      // Auto-generate LTX prompt
+      if (!document.getElementById('ltx-prompt').value) {
+        document.getElementById('ltx-prompt').value = this.generateLTXPrompt();
+      }
+    }
+  },
+
+  generateLTXPrompt() {
+    const nome = document.getElementById('f-nome').value || 'produto natural';
+    const desc = document.getElementById('f-descricao').value || '';
+    const categoria = document.getElementById('f-categoria').value || '';
+
+    let prompt = `Professional e-commerce product video of ${nome}. `;
+    prompt += `Clean white background with soft natural lighting. `;
+    prompt += `The product rotates slowly, showcasing its packaging and label. `;
+    if (desc) prompt += `${desc.substring(0, 100)}. `;
+    prompt += `Cinematic close-up shot, shallow depth of field, warm natural tones. `;
+    prompt += `Studio quality, high-end commercial advertisement style. `;
+    if (categoria) prompt += `Natural health food product category: ${categoria}. `;
+    prompt += `No text overlay, pure product showcase.`;
+
+    return prompt.substring(0, 500);
   },
 
   generateVideoScript() {
@@ -1298,6 +1437,98 @@ Responda em português brasileiro.`;
         localStorage.removeItem('cdn_did_key');
         this.didKey = '';
         document.getElementById('did-key-setup').style.display = '';
+      } else {
+        status.textContent = `Erro: ${err.message}`;
+      }
+    }
+  },
+
+  // === LTX STUDIO VIDEO ===
+  async generateLTXVideo() {
+    if (!this.ltxKey) {
+      document.getElementById('ltx-key-setup').style.display = '';
+      this.toast('Configure sua chave LTX primeiro!');
+      return;
+    }
+
+    const btn = document.getElementById('btn-gen-ltx');
+    const status = document.getElementById('video-status');
+    const prompt = document.getElementById('ltx-prompt').value.trim();
+
+    if (!prompt) {
+      document.getElementById('ltx-prompt').value = this.generateLTXPrompt();
+      this.toast('Prompt gerado! Edite se quiser e clique novamente.');
+      return;
+    }
+
+    const duration = parseInt(document.getElementById('ltx-duration').value);
+    const resolution = document.getElementById('ltx-resolution').value;
+    const camera = document.getElementById('ltx-camera').value;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Gerando vídeo LTX...';
+    status.textContent = 'Enviando para LTX Studio... o vídeo é gerado na hora (pode levar 30-90s).';
+
+    try {
+      const body = {
+        prompt: prompt,
+        model: 'ltx-2-3-pro',
+        duration: duration,
+        resolution: resolution,
+        generate_audio: true
+      };
+      if (camera) body.camera_motion = camera;
+
+      const res = await fetch('https://api.ltx.video/v1/text-to-video', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.ltxKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('AUTH');
+        if (res.status === 429) throw new Error('Limite de créditos atingido. Verifique seu plano LTX.');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || `Erro ${res.status}`);
+      }
+
+      // LTX returns the video directly as binary
+      const videoBlob = await res.blob();
+      const videoUrl = URL.createObjectURL(videoBlob);
+
+      status.textContent = 'Vídeo cinematográfico gerado com sucesso!';
+      btn.textContent = '✅ Vídeo pronto!';
+
+      const preview = document.getElementById('video-preview');
+      const player = document.getElementById('video-player');
+      player.src = videoUrl;
+      preview.style.display = '';
+
+      // Download link
+      document.getElementById('video-download-wrap').style.display = '';
+      document.getElementById('video-download-wrap').innerHTML = '';
+      const dlLink = document.createElement('a');
+      dlLink.className = 'video-download';
+      dlLink.href = videoUrl;
+      dlLink.download = `${(document.getElementById('f-nome').value || 'produto').replace(/\s+/g, '-')}-ltx.mp4`;
+      dlLink.textContent = '⬇️ Baixar vídeo';
+      document.getElementById('video-download-wrap').appendChild(dlLink);
+
+      this.toast('Vídeo LTX gerado com sucesso!');
+
+    } catch (err) {
+      console.error('LTX Error:', err);
+      btn.disabled = false;
+      btn.textContent = '🎥 Gerar Vídeo LTX';
+
+      if (err.message === 'AUTH') {
+        status.textContent = 'Chave LTX inválida. Reconfigure abaixo.';
+        localStorage.removeItem('cdn_ltx_key');
+        this.ltxKey = '';
+        document.getElementById('ltx-key-setup').style.display = '';
       } else {
         status.textContent = `Erro: ${err.message}`;
       }
@@ -1440,12 +1671,18 @@ Responda em português brasileiro.`;
     const script = this.generateVideoScript();
     document.getElementById('video-script').textContent = script;
 
+    // Populate LTX prompt
+    document.getElementById('ltx-prompt').value = this.generateLTXPrompt();
+
     // Reset video state
     document.getElementById('btn-gen-video').disabled = false;
     document.getElementById('btn-gen-video').textContent = '🎬 Gerar Vídeo com Avatar';
+    document.getElementById('btn-gen-ltx').disabled = false;
+    document.getElementById('btn-gen-ltx').textContent = '🎥 Gerar Vídeo LTX';
     document.getElementById('video-status').textContent = '';
     document.getElementById('video-preview').style.display = 'none';
     document.getElementById('video-download-wrap').style.display = 'none';
+    this.switchVideoProvider('did');
 
     // Confetti
     this.confetti();

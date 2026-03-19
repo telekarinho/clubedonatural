@@ -224,6 +224,17 @@ input[type=file]{display:none}
   .capture-zone-icon{font-size:48px}
   .capture-btns{flex-direction:column}
   .capture-btn{justify-content:center}
+
+/* === CAMERA VIEWFINDER === */
+.camera-viewfinder{position:relative;background:#000;border-radius:var(--radius);overflow:hidden;max-width:500px;margin:0 auto}
+.camera-viewfinder video{width:100%;display:block;border-radius:var(--radius)}
+.camera-viewfinder canvas{display:none}
+.camera-controls{display:flex;justify-content:center;gap:16px;padding:16px;background:rgba(0,0,0,.8)}
+.camera-shutter{width:64px;height:64px;border-radius:50%;border:4px solid #fff;background:transparent;cursor:pointer;position:relative;transition:.2s}
+.camera-shutter::after{content:'';position:absolute;inset:4px;border-radius:50%;background:#fff;transition:.2s}
+.camera-shutter:active::after{transform:scale(.85);background:#ddd}
+.camera-close{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:transparent;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.camera-switch{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:transparent;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .enhance-bar{flex-direction:column}
   .btn-row{flex-direction:column}
   .btn-row .btn{justify-content:center}
@@ -260,6 +271,17 @@ input[type=file]{display:none}
       </div>
       <input type="file" id="input-camera" accept="image/*" capture="environment">
       <input type="file" id="input-gallery" accept="image/*">
+    </div>
+
+    <!-- Live Camera Viewfinder -->
+    <div class="camera-viewfinder" id="camera-viewfinder" style="display:none">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <canvas id="camera-canvas"></canvas>
+      <div class="camera-controls">
+        <button class="camera-close" id="btn-camera-close" title="Fechar">✕</button>
+        <button class="camera-shutter" id="btn-camera-shutter" title="Tirar foto"></button>
+        <button class="camera-switch" id="btn-camera-switch" title="Trocar câmera">🔄</button>
+      </div>
     </div>
 
     <!-- After photo taken -->
@@ -676,15 +698,87 @@ const App = {
     if (el) { el.classList.add('active'); el.scrollIntoView({behavior:'smooth',block:'start'}); }
   },
 
+  // === CAMERA STREAM ===
+  cameraStream: null,
+  cameraFacing: 'environment',
+
+  async openCamera() {
+    const viewfinder = document.getElementById('camera-viewfinder');
+    const video = document.getElementById('camera-video');
+    const zone = document.getElementById('capture-zone');
+
+    try {
+      // Stop any existing stream
+      this.closeCamera();
+
+      const constraints = {
+        video: {
+          facingMode: this.cameraFacing,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      };
+
+      this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = this.cameraStream;
+      zone.style.display = 'none';
+      viewfinder.style.display = '';
+    } catch (err) {
+      console.warn('Camera API failed, falling back to input:', err);
+      // Fallback: use file input with capture attribute
+      document.getElementById('input-camera').click();
+    }
+  },
+
+  takePhoto() {
+    const video = document.getElementById('camera-video');
+    const canvas = document.getElementById('camera-canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+        this.closeCamera();
+        this.handleImage(file);
+      }
+    }, 'image/jpeg', 0.92);
+  },
+
+  switchCamera() {
+    this.cameraFacing = this.cameraFacing === 'environment' ? 'user' : 'environment';
+    this.openCamera();
+  },
+
+  closeCamera() {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(t => t.stop());
+      this.cameraStream = null;
+    }
+    document.getElementById('camera-viewfinder').style.display = 'none';
+    document.getElementById('camera-video').srcObject = null;
+  },
+
   // === EVENTS ===
   bindEvents() {
-    // Camera / gallery
+    // Camera (live viewfinder) / gallery (file picker)
     const inputCam = document.getElementById('input-camera');
     const inputGal = document.getElementById('input-gallery');
-    document.getElementById('btn-camera').onclick = () => inputCam.click();
+
+    document.getElementById('btn-camera').onclick = () => this.openCamera();
     document.getElementById('btn-gallery').onclick = () => inputGal.click();
     inputCam.onchange = (e) => this.handleImage(e.target.files[0]);
     inputGal.onchange = (e) => this.handleImage(e.target.files[0]);
+
+    // Camera viewfinder controls
+    document.getElementById('btn-camera-shutter').onclick = () => this.takePhoto();
+    document.getElementById('btn-camera-close').onclick = () => {
+      this.closeCamera();
+      document.getElementById('capture-zone').style.display = '';
+    };
+    document.getElementById('btn-camera-switch').onclick = () => this.switchCamera();
 
     // Drag & drop
     const zone = document.getElementById('capture-zone');
@@ -699,6 +793,7 @@ const App = {
     document.getElementById('btn-retake').onclick = () => {
       document.getElementById('preview-area').style.display = 'none';
       document.getElementById('capture-zone').style.display = '';
+      this.closeCamera();
       inputCam.value = ''; inputGal.value = '';
     };
 

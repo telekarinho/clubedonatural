@@ -285,8 +285,10 @@ input{font-family:inherit;outline:none}
 .modal-body{padding:0 24px 24px}
 
 /* Variation Picker */
-.var-picker{width:360px}
-.var-picker .var-product-name{font-size:.88rem;color:var(--text-secondary);margin-bottom:16px}
+.var-picker{width:400px}
+.var-picker .var-product-name{font-size:.88rem;color:var(--text-secondary);margin-bottom:12px}
+.var-section-title{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.var-section-title::after{content:'';flex:1;height:1px;background:var(--border-light)}
 .var-list{display:flex;flex-direction:column;gap:8px}
 .var-option{
   display:flex;align-items:center;justify-content:space-between;
@@ -297,6 +299,34 @@ input{font-family:inherit;outline:none}
 .var-option:active{transform:scale(.98)}
 .var-option .var-peso{font-weight:600;font-size:.95rem}
 .var-option .var-preco{font-weight:700;color:var(--primary);font-size:1.05rem}
+/* Granel section */
+.granel-section{margin-top:16px;padding-top:12px}
+.granel-box{
+  border:2px dashed var(--primary);border-radius:var(--radius);padding:16px;
+  background:rgba(45,106,79,.03);
+}
+.granel-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.granel-row label{font-size:.82rem;font-weight:600;color:var(--text-secondary);white-space:nowrap;min-width:50px}
+.granel-row input{
+  flex:1;padding:12px;border:2px solid var(--border);border-radius:var(--radius);
+  font-size:1.1rem;font-weight:700;text-align:center;
+}
+.granel-row input:focus{border-color:var(--primary)}
+.granel-row .granel-unit{font-size:.85rem;color:var(--text-secondary);font-weight:600}
+.granel-price-info{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 12px;background:var(--surface-alt);border-radius:var(--radius);
+  margin-bottom:10px;font-size:.82rem;
+}
+.granel-price-info .granel-ref{color:var(--text-secondary)}
+.granel-price-info .granel-calc{font-weight:700;color:var(--primary);font-size:1.05rem}
+.granel-add{
+  width:100%;padding:14px;background:var(--primary);color:#fff;font-size:.95rem;
+  font-weight:700;border-radius:var(--radius);display:flex;align-items:center;
+  justify-content:center;gap:6px;transition:background .2s;
+}
+.granel-add:hover{background:var(--primary-dark)}
+.granel-add:disabled{opacity:.4;cursor:not-allowed}
 
 /* ===== RECEIPT MODAL ===== */
 .receipt-modal{width:420px}
@@ -692,7 +722,25 @@ input{font-family:inherit;outline:none}
     </div>
     <div class="modal-body">
       <div class="var-product-name" id="varProductName"></div>
+      <div class="var-section-title">📦 Embalagens Prontas</div>
       <div class="var-list" id="varList"></div>
+      <div class="granel-section" id="granelSection">
+        <div class="var-section-title">⚖️ A Granel (peso livre)</div>
+        <div class="granel-box">
+          <div class="granel-price-info">
+            <span class="granel-ref" id="granelRefPrice">Ref: R$ 0,00/kg</span>
+            <span class="granel-calc" id="granelCalcPrice">R$ 0,00</span>
+          </div>
+          <div class="granel-row">
+            <label>Peso:</label>
+            <input type="number" id="granelWeight" placeholder="0" min="1" step="1" oninput="calcGranelPrice()">
+            <span class="granel-unit">gramas</span>
+          </div>
+          <button class="granel-add" id="btnGranelAdd" disabled onclick="addGranelToCart()">
+            ⚖️ Adicionar a Granel
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1075,24 +1123,98 @@ function selectProduct(id) {
   const product = PDV_PRODUCTS.find(p => p.id === id);
   if (!product) return;
 
-  if (product.variacoes.length === 1) {
+  // Always show picker if product has weighable units (granel option)
+  const hasWeighableUnit = product.variacoes.some(v => /\d+\s*(g|kg)$/i.test(v.peso));
+
+  if (product.variacoes.length === 1 && !hasWeighableUnit) {
     addToCart(product, product.variacoes[0]);
   } else {
     showVariationPicker(product);
   }
 }
 
+let currentPickerProduct = null;
+
 function showVariationPicker(product) {
+  currentPickerProduct = product;
   document.getElementById('varModalTitle').textContent = 'Escolha a variação';
   document.getElementById('varProductName').textContent = product.nome;
   const list = document.getElementById('varList');
   list.innerHTML = product.variacoes.map((v, i) => `
     <div class="var-option" onclick="pickVariation('${product.id}', ${i})">
-      <span class="var-peso">${v.peso}</span>
+      <span class="var-peso">📦 ${v.peso}</span>
       <span class="var-preco">${fmt(v.preco)}</span>
     </div>
   `).join('');
+
+  // Setup granel section - calculate price per kg from the largest variation
+  const granelSection = document.getElementById('granelSection');
+  const kgVar = product.variacoes.find(v => v.peso === '1kg');
+  const largestVar = product.variacoes[product.variacoes.length - 1];
+  let pricePerKg = 0;
+
+  if (kgVar) {
+    pricePerKg = kgVar.preco;
+  } else {
+    // Estimate from the largest variation
+    const weightMatch = largestVar.peso.match(/(\d+)\s*(g|kg|ml)/i);
+    if (weightMatch) {
+      const weight = parseFloat(weightMatch[1]);
+      const unit = weightMatch[2].toLowerCase();
+      if (unit === 'g' || unit === 'ml') {
+        pricePerKg = (largestVar.preco / weight) * 1000;
+      } else if (unit === 'kg') {
+        pricePerKg = largestVar.preco / weight;
+      }
+    }
+  }
+
+  // Check if product is weighable (g, kg units - not caps, un, ml for non-oils)
+  const hasWeighableUnit = product.variacoes.some(v => /\d+\s*(g|kg)$/i.test(v.peso));
+
+  if (hasWeighableUnit && pricePerKg > 0) {
+    granelSection.style.display = 'block';
+    granelSection.dataset.pricePerKg = pricePerKg.toFixed(4);
+    document.getElementById('granelRefPrice').textContent = `Ref: ${fmt(pricePerKg)}/kg`;
+    document.getElementById('granelCalcPrice').textContent = 'R$ 0,00';
+    document.getElementById('granelWeight').value = '';
+    document.getElementById('btnGranelAdd').disabled = true;
+  } else {
+    granelSection.style.display = 'none';
+  }
+
   openModal('varModal');
+  // Focus on granel weight input if on mobile (convenience)
+  setTimeout(() => document.getElementById('granelWeight')?.focus(), 300);
+}
+
+function calcGranelPrice() {
+  const weightG = parseFloat(document.getElementById('granelWeight').value) || 0;
+  const pricePerKg = parseFloat(document.getElementById('granelSection').dataset.pricePerKg) || 0;
+  const price = (weightG / 1000) * pricePerKg;
+
+  document.getElementById('granelCalcPrice').textContent = weightG > 0 ? fmt(price) : 'R$ 0,00';
+  document.getElementById('btnGranelAdd').disabled = weightG <= 0;
+
+  // Update button text with calculated price
+  const btn = document.getElementById('btnGranelAdd');
+  if (weightG > 0) {
+    btn.textContent = `⚖️ Adicionar ${weightG}g — ${fmt(price)}`;
+  } else {
+    btn.textContent = '⚖️ Adicionar a Granel';
+  }
+}
+
+function addGranelToCart() {
+  if (!currentPickerProduct) return;
+  const weightG = parseFloat(document.getElementById('granelWeight').value) || 0;
+  if (weightG <= 0) return;
+
+  const pricePerKg = parseFloat(document.getElementById('granelSection').dataset.pricePerKg) || 0;
+  const price = Math.round(((weightG / 1000) * pricePerKg) * 100) / 100;
+
+  addToCart(currentPickerProduct, { peso: weightG + 'g (granel)', preco: price });
+  closeModal('varModal');
 }
 
 function pickVariation(productId, varIndex) {

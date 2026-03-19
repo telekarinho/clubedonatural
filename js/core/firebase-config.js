@@ -8,12 +8,12 @@
   'use strict';
 
   const DEFAULT_CONFIG = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyBjZEQHSbckyxyNWZp-g3OMGHpR2M1fS1M",
+    authDomain: "clube-do-natural.firebaseapp.com",
+    projectId: "clube-do-natural",
+    storageBucket: "clube-do-natural.firebasestorage.app",
+    messagingSenderId: "940466691658",
+    appId: "1:940466691658:web:2fe4effb0b63523a2f10b3"
   };
 
   // Try to load saved config

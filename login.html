@@ -127,11 +127,27 @@ body{
     document.getElementById('not-configured').classList.add('show');
   } else {
     CdnFirebase.init();
-    // If already logged in, redirect
     if (CdnFirebase.ready) {
+      // Handle redirect result (mobile login returns here)
+      CdnFirebase.auth.getRedirectResult().then(async (result) => {
+        if (result && result.user) {
+          const userData = await CdnAuth._ensureUserDoc(result.user);
+          if (userData.approved) {
+            const params = new URLSearchParams(window.location.search);
+            const returnUrl = params.get('r') || '/admin/';
+            window.location.href = decodeURIComponent(returnUrl);
+          } else {
+            showPendingUI(result.user);
+          }
+        }
+      }).catch((err) => {
+        console.error('Redirect result error:', err);
+        showErrorMsg('Erro no login: ' + (err.code || err.message));
+      });
+
+      // If already logged in, redirect
       CdnFirebase.auth.onAuthStateChanged(async (user) => {
         if (user) {
-          // Check if approved
           try {
             const doc = await CdnFirebase.db.collection('users').doc(user.uid).get();
             if (doc.exists && doc.data().approved) {
@@ -144,6 +160,33 @@ body{
         }
       });
     }
+  }
+
+  function showErrorMsg(msg) {
+    const errorDiv = document.getElementById('error-msg');
+    errorDiv.textContent = msg;
+    errorDiv.classList.add('show');
+  }
+
+  function showPendingUI(user) {
+    document.querySelector('.login-container').innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <div style="font-size:64px;margin-bottom:12px">&#9203;</div>
+        <h2 style="color:#1B4332;margin-bottom:8px">Aguardando Aprovacao</h2>
+        <p style="color:#666;font-size:14px;margin-bottom:20px;line-height:1.5">
+          Sua conta <strong>${user.email}</strong> foi registrada!<br>
+          O administrador precisa aprovar seu acesso.
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:24px">
+          ${user.photoURL ? '<img src="' + user.photoURL + '" style="width:40px;height:40px;border-radius:50%">' : ''}
+          <span style="color:#333;font-size:14px">${user.displayName || user.email}</span>
+        </div>
+        <button onclick="firebase.auth().signOut().then(()=>location.reload())"
+          style="background:none;border:1px solid #ccc;padding:10px 24px;border-radius:8px;cursor:pointer;color:#666;font-size:14px">
+          Sair e trocar conta
+        </button>
+      </div>
+    `;
   }
 
   async function doGoogleLogin() {
@@ -198,10 +241,13 @@ body{
         Entrar com Google
       `;
 
-      let msg = 'Erro ao fazer login. Tente novamente.';
-      if (err.code === 'auth/popup-closed-by-user') msg = 'Login cancelado.';
-      else if (err.code === 'auth/unauthorized-domain') msg = 'Este domínio não está autorizado no Firebase. Adicione-o nas configurações do projeto.';
-      else if (err.code === 'auth/popup-blocked') msg = 'Popup bloqueado pelo navegador. Permita popups para este site.';
+      let msg = 'Erro ao fazer login. ';
+      if (err.code === 'auth/popup-closed-by-user') msg = 'Login cancelado. Tente novamente.';
+      else if (err.code === 'auth/unauthorized-domain') msg = 'Dominio nao autorizado no Firebase. Adicione "clubedonatural.vercel.app" em Authentication > Settings > Authorized domains no console Firebase.';
+      else if (err.code === 'auth/popup-blocked') msg = 'Popup bloqueado. Permita popups para este site ou tente em outro navegador.';
+      else if (err.code === 'auth/cancelled-popup-request') msg = 'Login cancelado. Tente novamente.';
+      else if (err.code === 'auth/network-request-failed') msg = 'Sem internet. Verifique sua conexao.';
+      else msg += (err.code || err.message || 'Erro desconhecido');
 
       errorDiv.textContent = msg;
       errorDiv.classList.add('show');

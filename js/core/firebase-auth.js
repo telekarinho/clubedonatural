@@ -94,11 +94,17 @@
       }
     },
 
-    // Google sign-in
+    // Google sign-in (popup on desktop, redirect on mobile)
     async signInWithGoogle() {
       if (!CdnFirebase.ready) throw new Error('Firebase não configurado');
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
+
+      // Mobile browsers block popups — use redirect instead
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent);
+      if (isMobile) {
+        return CdnFirebase.auth.signInWithRedirect(provider);
+      }
       return CdnFirebase.auth.signInWithPopup(provider);
     },
 

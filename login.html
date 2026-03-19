@@ -145,18 +145,23 @@ body{
         showErrorMsg('Erro no login: ' + (err.code || err.message));
       });
 
-      // If already logged in, redirect
+      // If already logged in (or just returned from redirect), handle user
       CdnFirebase.auth.onAuthStateChanged(async (user) => {
         if (user) {
           try {
-            const doc = await CdnFirebase.db.collection('users').doc(user.uid).get();
-            if (doc.exists && doc.data().approved) {
+            // Ensure user doc exists (creates it for first-time users)
+            const userData = await CdnAuth._ensureUserDoc(user);
+            if (userData.approved) {
               const params = new URLSearchParams(window.location.search);
               const returnUrl = params.get('r') || '/admin/';
               window.location.href = decodeURIComponent(returnUrl);
-              return;
+            } else {
+              showPendingUI(user);
             }
-          } catch(e) { console.error(e); }
+          } catch(e) {
+            console.error('Auth state error:', e);
+            showErrorMsg('Erro ao verificar conta: ' + (e.code || e.message));
+          }
         }
       });
     }

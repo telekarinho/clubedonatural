@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#1B4332">
+<title>Cadastro Inteligente — Clube do Natural</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#1B4332;--primary-md:#2D6A4F;--primary-lt:#52B788;--primary-bg:#d8f3dc;
+  --accent:#C4972A;--danger:#E63946;--info:#2196F3;
+  --bg:#f5f0e8;--card:#fff;--text:#1a1a1a;--text-md:#555;--text-lt:#888;
+  --radius:14px;--radius-sm:8px;--radius-xs:6px;
+  --shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.12);
+  --topbar-h:60px;
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* === TOPBAR === */
+.topbar{height:var(--topbar-h);background:var(--primary);color:#fff;display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:18px;font-weight:600;flex:1}
+.topbar-badge{background:var(--primary-lt);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.topbar a{color:rgba(255,255,255,.7);text-decoration:none;font-size:14px;transition:.2s}
+.topbar a:hover{color:#fff}
+
+/* === LAYOUT === */
+.container{max-width:900px;margin:0 auto;padding:20px}
+.steps{display:flex;gap:4px;margin-bottom:24px;background:var(--card);border-radius:var(--radius);padding:6px;box-shadow:var(--shadow)}
+.step{flex:1;text-align:center;padding:12px 8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--text-lt);transition:.3s;cursor:default}
+.step.active{background:var(--primary);color:#fff}
+.step.done{background:var(--primary-bg);color:var(--primary)}
+.step-num{display:inline-flex;width:24px;height:24px;border-radius:50%;align-items:center;justify-content:center;font-size:12px;margin-right:4px;background:rgba(0,0,0,.08)}
+.step.active .step-num{background:rgba(255,255,255,.2)}
+.step.done .step-num{background:var(--primary-lt);color:#fff}
+
+/* === SECTIONS === */
+.section{display:none;animation:fadeUp .4s ease}
+.section.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* === CAPTURE AREA === */
+.capture-zone{background:var(--card);border-radius:var(--radius);padding:40px;text-align:center;box-shadow:var(--shadow);border:3px dashed rgba(0,0,0,.1);transition:.3s;cursor:pointer;position:relative}
+.capture-zone:hover,.capture-zone.drag-over{border-color:var(--primary-lt);background:var(--primary-bg)}
+.capture-zone-icon{font-size:64px;margin-bottom:16px;display:block}
+.capture-zone h3{font-size:20px;margin-bottom:8px;color:var(--primary)}
+.capture-zone p{color:var(--text-md);font-size:14px;margin-bottom:20px}
+.capture-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.capture-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;border:none;cursor:pointer;transition:.2s}
+.capture-btn:hover{transform:translateY(-1px)}
+.capture-btn--camera{background:var(--primary);color:#fff}
+.capture-btn--gallery{background:var(--card);color:var(--primary);border:2px solid var(--primary)}
+input[type=file]{display:none}
+
+/* === PREVIEW + ENHANCE === */
+.preview-area{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(0,0,0,.06)}
+.preview-header h3{font-size:16px;font-weight:600}
+.preview-actions{display:flex;gap:8px}
+.preview-canvas-wrap{position:relative;background:#f0f0f0;display:flex;align-items:center;justify-content:center;min-height:300px;max-height:500px;overflow:hidden}
+.preview-canvas-wrap canvas{max-width:100%;max-height:500px;display:block}
+.preview-canvas-wrap img{max-width:100%;max-height:500px;object-fit:contain}
+
+/* Enhancement controls */
+.enhance-bar{display:flex;gap:12px;padding:16px 20px;background:rgba(0,0,0,.02);flex-wrap:wrap;align-items:center}
+.enhance-ctrl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-md)}
+.enhance-ctrl input[type=range]{width:100px;accent-color:var(--primary)}
+.enhance-toggle{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-xs);border:1px solid rgba(0,0,0,.1);background:var(--card);cursor:pointer;font-size:13px;font-weight:500;transition:.2s}
+.enhance-toggle.active{background:var(--primary-bg);border-color:var(--primary-lt);color:var(--primary)}
+
+/* === OCR STATUS === */
+.ocr-status{background:var(--card);border-radius:var(--radius);padding:24px;margin-top:16px;box-shadow:var(--shadow);text-align:center}
+.ocr-progress{width:100%;height:6px;background:rgba(0,0,0,.06);border-radius:3px;overflow:hidden;margin:16px 0}
+.ocr-progress-bar{height:100%;background:linear-gradient(90deg,var(--primary-lt),var(--primary));border-radius:3px;transition:width .3s;width:0}
+.ocr-status h4{font-size:15px;margin-bottom:4px}
+.ocr-status p{color:var(--text-md);font-size:13px}
+.ocr-extracted{text-align:left;margin-top:16px;padding:16px;background:rgba(0,0,0,.03);border-radius:var(--radius-sm);font-family:monospace;font-size:12px;max-height:200px;overflow-y:auto;white-space:pre-wrap;color:var(--text-md);display:none}
+
+/* === FORM === */
+.form-card{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:16px}
+.form-card h3{font-size:16px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-card h3 span{font-size:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-row.single{grid-template-columns:1fr}
+.form-row.triple{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-md);text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{padding:10px 14px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:14px;transition:.2s;font-family:inherit;background:var(--card)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--primary-lt);box-shadow:0 0 0 3px rgba(82,183,136,.15)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-group .auto-filled{border-color:var(--primary-lt);background:var(--primary-bg)}
+
+/* Tags / Selos */
+.selo-grid{display:flex;flex-wrap:wrap;gap:8px}
+.selo-chip{padding:8px 14px;border-radius:20px;font-size:13px;font-weight:500;border:2px solid rgba(0,0,0,.08);background:var(--card);cursor:pointer;transition:.2s;user-select:none}
+.selo-chip:hover{border-color:var(--primary-lt)}
+.selo-chip.active{background:var(--primary-bg);border-color:var(--primary-lt);color:var(--primary)}
+
+/* Variations */
+.var-list{display:flex;flex-direction:column;gap:8px}
+.var-row{display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;align-items:center}
+.var-row input{padding:8px 12px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:14px}
+.var-row input:focus{outline:none;border-color:var(--primary-lt)}
+.var-remove{width:36px;height:36px;border-radius:50%;border:none;background:rgba(230,57,70,.1);color:var(--danger);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.var-remove:hover{background:var(--danger);color:#fff}
+.var-add{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:2px dashed rgba(0,0,0,.12);border-radius:var(--radius-xs);background:none;cursor:pointer;color:var(--primary);font-size:13px;font-weight:600;transition:.2s;margin-top:4px}
+.var-add:hover{border-color:var(--primary-lt);background:var(--primary-bg)}
+
+/* Benefits list */
+.benefit-list{display:flex;flex-direction:column;gap:6px}
+.benefit-row{display:grid;grid-template-columns:1fr 32px;gap:6px;align-items:center}
+.benefit-row input{padding:8px 12px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:14px}
+.benefit-row input:focus{outline:none;border-color:var(--primary-lt)}
+
+/* === BUTTONS === */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;border:none;cursor:pointer;transition:.2s}
+.btn:hover{transform:translateY(-1px)}
+.btn--primary{background:var(--primary);color:#fff}
+.btn--primary:hover{background:var(--primary-md)}
+.btn--success{background:#16a34a;color:#fff}
+.btn--success:hover{background:#15803d}
+.btn--outline{background:none;border:2px solid rgba(0,0,0,.12);color:var(--text-md)}
+.btn--outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn--sm{padding:8px 16px;font-size:13px}
+.btn--danger{background:var(--danger);color:#fff}
+.btn-row{display:flex;gap:12px;margin-top:20px;justify-content:flex-end;flex-wrap:wrap}
+
+/* === PRODUCT PREVIEW CARD === */
+.product-preview{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg);max-width:320px;margin:0 auto}
+.product-preview-img{height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.product-preview-img img{width:100%;height:100%;object-fit:contain}
+.product-preview-body{padding:16px}
+.product-preview-body .badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.product-preview-body .badge{font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600}
+.product-preview-body .badge-organico{background:#e8f5e9;color:#2e7d32}
+.product-preview-body .badge-vegano{background:#f3e5f5;color:#7b1fa2}
+.product-preview-body .badge-sem_gluten{background:#fff3e0;color:#e65100}
+.product-preview-body .badge-sem_lactose{background:#e3f2fd;color:#1565c0}
+.product-preview-body .badge-integral{background:#efebe9;color:#4e342e}
+.product-preview-body .badge-sem_acucar{background:#fce4ec;color:#c62828}
+.product-preview-body h4{font-size:16px;margin-bottom:4px}
+.product-preview-body .price{font-size:22px;font-weight:700;color:var(--primary)}
+.product-preview-body .weight{font-size:13px;color:var(--text-lt)}
+.product-preview-body .desc{font-size:13px;color:var(--text-md);margin-top:8px;line-height:1.4}
+
+/* === SUCCESS === */
+.success-screen{text-align:center;padding:60px 20px}
+.success-icon{font-size:80px;margin-bottom:16px;display:block}
+.success-screen h2{font-size:24px;color:var(--primary);margin-bottom:8px}
+.success-screen p{color:var(--text-md);font-size:15px;margin-bottom:24px}
+.success-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* === TOAST === */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--primary);color:#fff;padding:12px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);z-index:9999;transition:.4s;opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* === LOADING === */
+.spinner{width:40px;height:40px;border:4px solid rgba(0,0,0,.08);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* === RESPONSIVE === */
+@media(max-width:640px){
+  .container{padding:12px}
+  .form-row,.form-row.triple{grid-template-columns:1fr}
+  .steps{overflow-x:auto}
+  .step{white-space:nowrap;padding:10px 12px;font-size:12px}
+  .capture-zone{padding:24px 16px}
+  .capture-zone-icon{font-size:48px}
+  .capture-btns{flex-direction:column}
+  .capture-btn{justify-content:center}
+  .enhance-bar{flex-direction:column}
+  .btn-row{flex-direction:column}
+  .btn-row .btn{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="/admin/">← Admin</a>
+  <h1>Cadastro Inteligente</h1>
+  <span class="topbar-badge">AI OCR</span>
+</div>
+
+<!-- STEPS -->
+<div class="container">
+  <div class="steps" id="steps">
+    <div class="step active" data-step="1"><span class="step-num">1</span> Foto</div>
+    <div class="step" data-step="2"><span class="step-num">2</span> Análise</div>
+    <div class="step" data-step="3"><span class="step-num">3</span> Dados</div>
+    <div class="step" data-step="4"><span class="step-num">4</span> Confirmar</div>
+  </div>
+
+  <!-- STEP 1: CAPTURE -->
+  <div class="section active" id="sec-capture">
+    <div class="capture-zone" id="capture-zone">
+      <span class="capture-zone-icon">📸</span>
+      <h3>Tire a foto do produto</h3>
+      <p>Fotografe a frente da embalagem — o sistema vai extrair nome, peso, ingredientes e informações nutricionais automaticamente</p>
+      <div class="capture-btns">
+        <button class="capture-btn capture-btn--camera" id="btn-camera">📷 Tirar Foto</button>
+        <button class="capture-btn capture-btn--gallery" id="btn-gallery">🖼️ Galeria</button>
+      </div>
+      <input type="file" id="input-camera" accept="image/*" capture="environment">
+      <input type="file" id="input-gallery" accept="image/*">
+    </div>
+
+    <!-- After photo taken -->
+    <div id="preview-area" style="display:none">
+      <div class="preview-area">
+        <div class="preview-header">
+          <h3>📷 Foto capturada</h3>
+          <div class="preview-actions">
+            <button class="btn btn--outline btn--sm" id="btn-retake">🔄 Outra foto</button>
+          </div>
+        </div>
+        <div class="preview-canvas-wrap">
+          <canvas id="photo-canvas"></canvas>
+        </div>
+        <div class="enhance-bar">
+          <div class="enhance-ctrl">
+            <label>☀️ Brilho</label>
+            <input type="range" id="ctrl-brightness" min="-50" max="50" value="0">
+          </div>
+          <div class="enhance-ctrl">
+            <label>🎨 Contraste</label>
+            <input type="range" id="ctrl-contrast" min="-50" max="50" value="10">
+          </div>
+          <div class="enhance-ctrl">
+            <label>💎 Nitidez</label>
+            <input type="range" id="ctrl-sharpness" min="0" max="100" value="30">
+          </div>
+          <button class="enhance-toggle active" id="ctrl-bg-remove">✂️ Fundo branco</button>
+          <button class="enhance-toggle" id="ctrl-auto-enhance">✨ Auto melhorar</button>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn btn--outline" id="btn-skip-ocr">Pular extração →</button>
+        <button class="btn btn--primary" id="btn-analyze">🔍 Analisar e Extrair Dados</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: OCR ANALYSIS -->
+  <div class="section" id="sec-analyze">
+    <div class="ocr-status" id="ocr-status">
+      <div class="spinner"></div>
+      <h4>Analisando imagem...</h4>
+      <p id="ocr-status-text">Preparando OCR</p>
+      <div class="ocr-progress">
+        <div class="ocr-progress-bar" id="ocr-progress-bar"></div>
+      </div>
+      <div class="ocr-extracted" id="ocr-raw-text"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: FORM -->
+  <div class="section" id="sec-form">
+    <!-- Basic info -->
+    <div class="form-card">
+      <h3><span>📦</span> Informações Básicas</h3>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Nome do Produto *</label>
+          <input type="text" id="f-nome" placeholder="Ex: Sementes de Chia Orgânica">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="f-categoria">
+            <option value="graos">🌾 Grãos & Cereais</option>
+            <option value="suplementos">💪 Suplementos</option>
+            <option value="chas">🍵 Chás & Infusões</option>
+            <option value="temperos">🌶️ Temperos</option>
+            <option value="mel">🍯 Mel & Derivados</option>
+            <option value="oleos">🫒 Óleos Naturais</option>
+            <option value="snacks">🥜 Snacks Saudáveis</option>
+            <option value="higiene">🧼 Higiene Natural</option>
+            <option value="capsulas">💊 Cápsulas Naturais</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Código de barras</label>
+          <input type="text" id="f-barcode" placeholder="7891234567890">
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea id="f-descricao" placeholder="Descrição do produto..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing & Variations -->
+    <div class="form-card">
+      <h3><span>💰</span> Preços e Variações</h3>
+      <div class="var-list" id="var-list">
+        <div class="var-row">
+          <input type="text" placeholder="Peso (ex: 250g)" class="var-peso" value="">
+          <input type="number" step="0.01" placeholder="Preço (R$)" class="var-preco" value="">
+          <button class="var-remove" onclick="this.closest('.var-row').remove()" title="Remover">×</button>
+        </div>
+      </div>
+      <button class="var-add" id="btn-add-var">+ Adicionar variação</button>
+      <div class="form-row" style="margin-top:16px">
+        <div class="form-group">
+          <label>Custo unitário (R$)</label>
+          <input type="number" step="0.01" id="f-custo" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Margem de lucro (%)</label>
+          <input type="number" id="f-margem" placeholder="55" value="55">
+        </div>
+      </div>
+    </div>
+
+    <!-- Selos -->
+    <div class="form-card">
+      <h3><span>🏷️</span> Selos e Certificações</h3>
+      <div class="selo-grid" id="selo-grid">
+        <div class="selo-chip" data-selo="organico">🌿 Orgânico</div>
+        <div class="selo-chip" data-selo="vegano">🌱 Vegano</div>
+        <div class="selo-chip" data-selo="sem_gluten">🚫 Sem Glúten</div>
+        <div class="selo-chip" data-selo="sem_lactose">🥛 Sem Lactose</div>
+        <div class="selo-chip" data-selo="integral">🌾 Integral</div>
+        <div class="selo-chip" data-selo="sem_acucar">🍬 Sem Açúcar</div>
+      </div>
+    </div>
+
+    <!-- Nutritional info -->
+    <div class="form-card">
+      <h3><span>📊</span> Informação Nutricional</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Porção</label>
+          <input type="text" id="f-porcao" placeholder="Ex: 15g (1 colher de sopa)">
+        </div>
+        <div class="form-group">
+          <label>Calorias (kcal)</label>
+          <input type="number" id="f-calorias" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row triple">
+        <div class="form-group">
+          <label>Proteínas</label>
+          <input type="text" id="f-proteinas" placeholder="0g">
+        </div>
+        <div class="form-group">
+          <label>Gorduras</label>
+          <input type="text" id="f-gorduras" placeholder="0g">
+        </div>
+        <div class="form-group">
+          <label>Carboidratos</label>
+          <input type="text" id="f-carboidratos" placeholder="0g">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fibras</label>
+          <input type="text" id="f-fibras" placeholder="0g">
+        </div>
+        <div class="form-group">
+          <label>Sódio</label>
+          <input type="text" id="f-sodio" placeholder="0mg">
+        </div>
+      </div>
+    </div>
+
+    <!-- Benefits / How to use -->
+    <div class="form-card">
+      <h3><span>✨</span> Benefícios e Dicas</h3>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Benefícios (um por linha)</label>
+        <textarea id="f-beneficios" rows="4" placeholder="Rico em Ômega-3&#10;Alto teor de fibras&#10;Auxilia na saciedade"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Como usar (um por linha)</label>
+        <textarea id="f-como-usar" rows="3" placeholder="Adicione 1 colher em sucos&#10;Misture no iogurte"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Curiosidade</label>
+        <textarea id="f-curiosidade" rows="2" placeholder="Fato interessante sobre o produto..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Contraindicações</label>
+        <textarea id="f-contraindicacoes" rows="2" placeholder="Consulte médico em caso de..."></textarea>
+      </div>
+    </div>
+
+    <!-- Stock -->
+    <div class="form-card">
+      <h3><span>📦</span> Estoque</h3>
+      <div class="form-row triple">
+        <div class="form-group">
+          <label>Loja Centro</label>
+          <input type="number" id="f-est-centro" value="0">
+        </div>
+        <div class="form-group">
+          <label>Loja Shopping</label>
+          <input type="number" id="f-est-shopping" value="0">
+        </div>
+        <div class="form-group">
+          <label>Loja Norte</label>
+          <input type="number" id="f-est-norte" value="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estoque mínimo (alerta)</label>
+          <input type="number" id="f-est-minimo" value="10">
+        </div>
+        <div class="form-group">
+          <label>Fornecedor</label>
+          <input type="text" id="f-fornecedor" placeholder="Nome do fornecedor">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn--outline" id="btn-back-photo">← Voltar à foto</button>
+      <button class="btn btn--primary" id="btn-preview">Pré-visualizar →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: PREVIEW & CONFIRM -->
+  <div class="section" id="sec-preview">
+    <div class="form-card" style="text-align:center">
+      <h3 style="justify-content:center"><span>👁️</span> Assim vai ficar no catálogo</h3>
+      <div class="product-preview" id="product-preview"></div>
+    </div>
+
+    <div class="form-card" id="json-preview-card">
+      <h3><span>🔧</span> Dados técnicos (JSON)</h3>
+      <pre id="json-preview" style="background:rgba(0,0,0,.03);padding:16px;border-radius:8px;font-size:12px;max-height:300px;overflow:auto;white-space:pre-wrap"></pre>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn--outline" id="btn-back-form">← Editar dados</button>
+      <button class="btn btn--success" id="btn-save">✅ Salvar Produto</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS SCREEN -->
+  <div class="section" id="sec-success">
+    <div class="success-screen">
+      <span class="success-icon">🎉</span>
+      <h2>Produto Cadastrado!</h2>
+      <p id="success-msg">Produto salvo com sucesso no sistema.</p>
+      <div class="success-actions">
+        <button class="btn btn--primary" id="btn-new">📸 Cadastrar outro</button>
+        <button class="btn btn--outline" onclick="location.href='/catalogo.html'">🛍️ Ver catálogo</button>
+        <button class="btn btn--outline" onclick="location.href='/admin/'">📊 Painel admin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Tesseract.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+/* ============================================
+   CLUBE DO NATURAL — Cadastro Inteligente
+   Camera → Enhance → OCR → Auto-fill → Save
+   ============================================ */
+
+const App = {
+  currentStep: 1,
+  originalImage: null,   // raw Image element
+  enhancedBlob: null,    // processed image blob
+  extractedText: '',
+  productData: {},
+
+  init() {
+    this.bindEvents();
+  },
+
+  // === NAVIGATION ===
+  goToStep(n) {
+    this.currentStep = n;
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.step').forEach(s => {
+      const sn = +s.dataset.step;
+      s.classList.remove('active','done');
+      if (sn === n) s.classList.add('active');
+      else if (sn < n) s.classList.add('done');
+    });
+    const sections = ['sec-capture','sec-analyze','sec-form','sec-preview','sec-success'];
+    const el = document.getElementById(sections[n - 1]);
+    if (el) { el.classList.add('active'); el.scrollIntoView({behavior:'smooth',block:'start'}); }
+  },
+
+  // === EVENTS ===
+  bindEvents() {
+    // Camera / gallery
+    const inputCam = document.getElementById('input-camera');
+    const inputGal = document.getElementById('input-gallery');
+    document.getElementById('btn-camera').onclick = () => inputCam.click();
+    document.getElementById('btn-gallery').onclick = () => inputGal.click();
+    inputCam.onchange = (e) => this.handleImage(e.target.files[0]);
+    inputGal.onchange = (e) => this.handleImage(e.target.files[0]);
+
+    // Drag & drop
+    const zone = document.getElementById('capture-zone');
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) this.handleImage(e.dataTransfer.files[0]);
+    });
+
+    // Retake
+    document.getElementById('btn-retake').onclick = () => {
+      document.getElementById('preview-area').style.display = 'none';
+      document.getElementById('capture-zone').style.display = '';
+      inputCam.value = ''; inputGal.value = '';
+    };
+
+    // Enhancement controls
+    document.getElementById('ctrl-brightness').oninput = () => this.applyEnhancements();
+    document.getElementById('ctrl-contrast').oninput = () => this.applyEnhancements();
+    document.getElementById('ctrl-sharpness').oninput = () => this.applyEnhancements();
+    document.getElementById('ctrl-bg-remove').onclick = (e) => {
+      e.target.classList.toggle('active');
+      this.applyEnhancements();
+    };
+    document.getElementById('ctrl-auto-enhance').onclick = (e) => {
+      e.target.classList.toggle('active');
+      if (e.target.classList.contains('active')) {
+        document.getElementById('ctrl-brightness').value = 10;
+        document.getElementById('ctrl-contrast').value = 20;
+        document.getElementById('ctrl-sharpness').value = 50;
+      }
+      this.applyEnhancements();
+    };
+
+    // Analyze
+    document.getElementById('btn-analyze').onclick = () => this.startOCR();
+    document.getElementById('btn-skip-ocr').onclick = () => this.goToStep(3);
+
+    // Form navigation
+    document.getElementById('btn-back-photo').onclick = () => this.goToStep(1);
+    document.getElementById('btn-preview').onclick = () => this.showPreview();
+    document.getElementById('btn-back-form').onclick = () => this.goToStep(3);
+    document.getElementById('btn-save').onclick = () => this.saveProduct();
+    document.getElementById('btn-new').onclick = () => this.reset();
+
+    // Selos toggle
+    document.querySelectorAll('.selo-chip').forEach(chip => {
+      chip.onclick = () => chip.classList.toggle('active');
+    });
+
+    // Add variation
+    document.getElementById('btn-add-var').onclick = () => this.addVariation();
+  },
+
+  // === IMAGE HANDLING ===
+  handleImage(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        this.originalImage = img;
+        document.getElementById('capture-zone').style.display = 'none';
+        document.getElementById('preview-area').style.display = '';
+        this.applyEnhancements();
+        this.toast('Foto carregada! Ajuste e clique em Analisar.');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  // === IMAGE ENHANCEMENT ===
+  applyEnhancements() {
+    const canvas = document.getElementById('photo-canvas');
+    const ctx = canvas.getContext('2d');
+    const img = this.originalImage;
+    if (!img) return;
+
+    // Scale down if too large (max 1200px)
+    const maxDim = 1200;
+    let w = img.naturalWidth, h = img.naturalHeight;
+    if (w > maxDim || h > maxDim) {
+      const ratio = Math.min(maxDim / w, maxDim / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    canvas.width = w;
+    canvas.height = h;
+
+    // Draw original
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const brightness = +document.getElementById('ctrl-brightness').value;
+    const contrast = +document.getElementById('ctrl-contrast').value;
+    const sharpness = +document.getElementById('ctrl-sharpness').value;
+    const removeBg = document.getElementById('ctrl-bg-remove').classList.contains('active');
+
+    // Get pixel data
+    let imageData = ctx.getImageData(0, 0, w, h);
+    let data = imageData.data;
+
+    // Brightness & Contrast
+    const bFactor = brightness * 2;
+    const cFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    for (let i = 0; i < data.length; i += 4) {
+      data[i]     = clamp(cFactor * (data[i] + bFactor - 128) + 128);
+      data[i + 1] = clamp(cFactor * (data[i + 1] + bFactor - 128) + 128);
+      data[i + 2] = clamp(cFactor * (data[i + 2] + bFactor - 128) + 128);
+    }
+
+    // Simple background removal (make near-white/gray background pure white)
+    if (removeBg) {
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        // If pixel is light enough and not very saturated → white
+        const avg = (r + g + b) / 3;
+        const maxC = Math.max(r,g,b), minC = Math.min(r,g,b);
+        const saturation = maxC > 0 ? (maxC - minC) / maxC : 0;
+        if (avg > 180 && saturation < 0.2) {
+          data[i] = 255; data[i+1] = 255; data[i+2] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    // Unsharp mask (sharpness)
+    if (sharpness > 0) {
+      const amount = sharpness / 100;
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = w; tempCanvas.height = h;
+      const tCtx = tempCanvas.getContext('2d');
+      tCtx.filter = `blur(1px)`;
+      tCtx.drawImage(canvas, 0, 0);
+      const blurred = tCtx.getImageData(0, 0, w, h).data;
+      const sharp = ctx.getImageData(0, 0, w, h);
+      const sd = sharp.data;
+      for (let i = 0; i < sd.length; i += 4) {
+        sd[i]     = clamp(sd[i] + amount * (sd[i] - blurred[i]));
+        sd[i + 1] = clamp(sd[i+1] + amount * (sd[i+1] - blurred[i+1]));
+        sd[i + 2] = clamp(sd[i+2] + amount * (sd[i+2] - blurred[i+2]));
+      }
+      ctx.putImageData(sharp, 0, 0);
+    }
+
+    // Store enhanced blob
+    canvas.toBlob(blob => { this.enhancedBlob = blob; }, 'image/jpeg', 0.92);
+  },
+
+  // === OCR ===
+  async startOCR() {
+    this.goToStep(2);
+    const progressBar = document.getElementById('ocr-progress-bar');
+    const statusText = document.getElementById('ocr-status-text');
+    const rawTextDiv = document.getElementById('ocr-raw-text');
+
+    statusText.textContent = 'Carregando engine de reconhecimento...';
+    progressBar.style.width = '10%';
+
+    try {
+      const canvas = document.getElementById('photo-canvas');
+
+      statusText.textContent = 'Reconhecendo texto na imagem...';
+      progressBar.style.width = '30%';
+
+      const result = await Tesseract.recognize(canvas, 'por', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            const pct = Math.round(30 + m.progress * 60);
+            progressBar.style.width = pct + '%';
+            statusText.textContent = `Reconhecendo texto... ${Math.round(m.progress * 100)}%`;
+          }
+        }
+      });
+
+      progressBar.style.width = '95%';
+      statusText.textContent = 'Extraindo informações...';
+
+      this.extractedText = result.data.text;
+      rawTextDiv.textContent = this.extractedText;
+      rawTextDiv.style.display = 'block';
+
+      // Parse extracted text
+      this.parseOCRText(this.extractedText);
+
+      progressBar.style.width = '100%';
+      statusText.textContent = 'Dados extraídos com sucesso!';
+
+      setTimeout(() => {
+        this.goToStep(3);
+        this.toast('Dados extraídos! Revise e complete as informações.');
+      }, 800);
+
+    } catch (err) {
+      statusText.textContent = 'Erro no OCR: ' + err.message;
+      progressBar.style.width = '0';
+      console.error('OCR Error:', err);
+      setTimeout(() => this.goToStep(3), 2000);
+    }
+  },
+
+  // === SMART PARSING ===
+  parseOCRText(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const fullText = text.toLowerCase();
+
+    // --- Product name (usually the largest/first text) ---
+    const nameCandidates = lines.filter(l => l.length > 3 && l.length < 80 && !/^\d/.test(l) && !/informac|nutric|ingredi|porção|porçao|modo de|contém|alérg/i.test(l));
+    if (nameCandidates.length > 0) {
+      document.getElementById('f-nome').value = nameCandidates[0];
+      document.getElementById('f-nome').classList.add('auto-filled');
+    }
+
+    // --- Weight ---
+    const weightMatch = text.match(/(\d+)\s*(g|kg|ml|l|caps|cápsulas)\b/i);
+    if (weightMatch) {
+      const varPeso = document.querySelector('.var-peso');
+      if (varPeso) { varPeso.value = weightMatch[0]; varPeso.classList.add('auto-filled'); }
+    }
+
+    // --- Barcode (EAN) ---
+    const barcodeMatch = text.match(/\b(\d{8}|\d{13})\b/);
+    if (barcodeMatch) {
+      document.getElementById('f-barcode').value = barcodeMatch[1];
+      document.getElementById('f-barcode').classList.add('auto-filled');
+    }
+
+    // --- Category detection ---
+    const catMap = {
+      'chia|linhaça|quinoa|aveia|grão|cereal|semente': 'graos',
+      'suplemento|proteína|whey|bcaa|creatina': 'suplementos',
+      'chá|infusão|camomila|hortelã|hibisco|matchá': 'chas',
+      'tempero|cúrcuma|gengibre|canela|pimenta|orégano': 'temperos',
+      'mel|própolis|geleia real|pólen': 'mel',
+      'óleo|azeite|coco|gergelim|abacate': 'oleos',
+      'castanha|granola|barra|snack|mix|nuts|fruta seca': 'snacks',
+      'sabonete|shampoo|condicionador|desodorante|natural': 'higiene',
+      'cápsula|coenzima|magnésio|vitamina|colágeno|coq10': 'capsulas'
+    };
+    for (const [pattern, cat] of Object.entries(catMap)) {
+      if (new RegExp(pattern, 'i').test(fullText)) {
+        document.getElementById('f-categoria').value = cat;
+        break;
+      }
+    }
+
+    // --- Selos ---
+    const seloMap = {
+      'orgânic|organic': 'organico',
+      'vegan|100% vegetal': 'vegano',
+      'sem glúten|gluten.?free|não contém glúten': 'sem_gluten',
+      'sem lactose|lactose.?free|não contém lactose': 'sem_lactose',
+      'integral': 'integral',
+      'sem açúcar|sugar.?free|zero açúcar': 'sem_acucar'
+    };
+    for (const [pattern, selo] of Object.entries(seloMap)) {
+      if (new RegExp(pattern, 'i').test(fullText)) {
+        const chip = document.querySelector(`.selo-chip[data-selo="${selo}"]`);
+        if (chip) chip.classList.add('active');
+      }
+    }
+
+    // --- Nutritional info ---
+    const nutritionPatterns = {
+      'f-porcao': /porç[aã]o\s*[:\-]?\s*(.+?)(?:\n|$)/i,
+      'f-calorias': /(?:valor\s*energ[eé]tico|calorias?|energia)[:\s]*(\d+)/i,
+      'f-proteinas': /prote[ií]nas?[:\s]*([\d,.]+\s*g)/i,
+      'f-gorduras': /gorduras?\s*(?:totais?)?[:\s]*([\d,.]+\s*g)/i,
+      'f-carboidratos': /carboidratos?[:\s]*([\d,.]+\s*g)/i,
+      'f-fibras': /fibras?\s*(?:alimentar(?:es)?)?[:\s]*([\d,.]+\s*g)/i,
+      'f-sodio': /s[oó]dio[:\s]*([\d,.]+\s*m?g)/i
+    };
+    for (const [fieldId, regex] of Object.entries(nutritionPatterns)) {
+      const match = text.match(regex);
+      if (match) {
+        const el = document.getElementById(fieldId);
+        if (el) { el.value = match[1].trim(); el.classList.add('auto-filled'); }
+      }
+    }
+
+    // --- Ingredients → description ---
+    const ingredMatch = text.match(/ingredientes?\s*[:\-]?\s*(.+?)(?:\.\s*(?:contém|alérgicos|conservar|não contém)|$)/is);
+    if (ingredMatch) {
+      document.getElementById('f-descricao').value = 'Ingredientes: ' + ingredMatch[1].trim();
+      document.getElementById('f-descricao').classList.add('auto-filled');
+    }
+
+    // --- Shelf life / instructions → como usar ---
+    const modoMatch = text.match(/modo de (?:usar|preparo|consumo)\s*[:\-]?\s*(.+?)(?:\.\s*(?:conservar|manter|armazenar)|$)/is);
+    if (modoMatch) {
+      document.getElementById('f-como-usar').value = modoMatch[1].trim();
+      document.getElementById('f-como-usar').classList.add('auto-filled');
+    }
+
+    // --- Allergens → contraindicações ---
+    const allergMatch = text.match(/(?:contém|alérgicos?|alerg[eê]nicos?)\s*[:\-]?\s*(.+?)(?:\.\s|$)/i);
+    if (allergMatch) {
+      document.getElementById('f-contraindicacoes').value = allergMatch[1].trim();
+      document.getElementById('f-contraindicacoes').classList.add('auto-filled');
+    }
+  },
+
+  // === VARIATIONS ===
+  addVariation(peso = '', preco = '') {
+    const list = document.getElementById('var-list');
+    const row = document.createElement('div');
+    row.className = 'var-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Peso (ex: 500g)" class="var-peso" value="${peso}">
+      <input type="number" step="0.01" placeholder="Preço (R$)" class="var-preco" value="${preco}">
+      <button class="var-remove" onclick="this.closest('.var-row').remove()" title="Remover">×</button>
+    `;
+    list.appendChild(row);
+  },
+
+  // === PREVIEW ===
+  showPreview() {
+    const nome = document.getElementById('f-nome').value.trim();
+    if (!nome) { this.toast('Preencha o nome do produto!'); return; }
+
+    const vars = this.getVariations();
+    if (vars.length === 0 || !vars[0].preco) { this.toast('Adicione pelo menos um preço!'); return; }
+
+    const selos = this.getSelectedSelos();
+    const imgUrl = this.enhancedBlob ? URL.createObjectURL(this.enhancedBlob) : '';
+
+    // Build preview card
+    const preview = document.getElementById('product-preview');
+    const badgesHTML = selos.map(s => {
+      const labels = {organico:'🌿 Orgânico',vegano:'🌱 Vegano',sem_gluten:'🚫 Sem Glúten',sem_lactose:'🥛 Sem Lactose',integral:'🌾 Integral',sem_acucar:'🍬 Sem Açúcar'};
+      return `<span class="badge badge-${s}">${labels[s]||s}</span>`;
+    }).join('');
+
+    preview.innerHTML = `
+      <div class="product-preview-img">
+        ${imgUrl ? `<img src="${imgUrl}" alt="${nome}">` : '<span style="font-size:64px">📦</span>'}
+      </div>
+      <div class="product-preview-body">
+        <div class="badges">${badgesHTML}</div>
+        <h4>${nome}</h4>
+        <div class="price">R$ ${vars[0].preco.toFixed(2).replace('.',',')}</div>
+        <div class="weight">${vars[0].peso || ''}</div>
+        ${document.getElementById('f-descricao').value ? `<div class="desc">${document.getElementById('f-descricao').value.substring(0,120)}...</div>` : ''}
+      </div>
+    `;
+
+    // Build JSON preview
+    const product = this.buildProductObject();
+    document.getElementById('json-preview').textContent = JSON.stringify(product, null, 2);
+
+    this.goToStep(4);
+  },
+
+  // === BUILD PRODUCT OBJECT ===
+  buildProductObject() {
+    const nome = document.getElementById('f-nome').value.trim();
+    const id = this.slugify(nome);
+    const vars = this.getVariations();
+    const selos = this.getSelectedSelos();
+
+    const beneficios = document.getElementById('f-beneficios').value.split('\n').filter(Boolean).map(s => s.trim());
+    const comoUsar = document.getElementById('f-como-usar').value.split('\n').filter(Boolean).map(s => s.trim());
+
+    return {
+      id,
+      nome,
+      categoria: document.getElementById('f-categoria').value,
+      preco: vars[0] ? vars[0].preco : 0,
+      variacoes: vars.map(v => ({ peso: v.peso, preco: v.preco })),
+      selos,
+      imagem: '',   // will be set separately if image is uploaded
+      descricao: document.getElementById('f-descricao').value.trim(),
+      beneficios,
+      comoUsar,
+      combinaCom: [],
+      infoNutricional: {
+        porcao: document.getElementById('f-porcao').value.trim(),
+        calorias: +document.getElementById('f-calorias').value || 0,
+        proteinas: document.getElementById('f-proteinas').value.trim(),
+        gorduras: document.getElementById('f-gorduras').value.trim(),
+        carboidratos: document.getElementById('f-carboidratos').value.trim(),
+        fibras: document.getElementById('f-fibras').value.trim(),
+        sodio: document.getElementById('f-sodio').value.trim()
+      },
+      curiosidade: document.getElementById('f-curiosidade').value.trim(),
+      contraindicacoes: document.getElementById('f-contraindicacoes').value.trim(),
+      estoque: {
+        centro: +document.getElementById('f-est-centro').value || 0,
+        shopping: +document.getElementById('f-est-shopping').value || 0,
+        norte: +document.getElementById('f-est-norte').value || 0
+      },
+      custoUnitario: +document.getElementById('f-custo').value || 0,
+      margemLucro: +document.getElementById('f-margem').value || 55,
+      codigoBarras: document.getElementById('f-barcode').value.trim(),
+      fornecedor: document.getElementById('f-fornecedor').value.trim(),
+      estoqueMinimo: +document.getElementById('f-est-minimo').value || 10,
+      ativo: true,
+      destaque: false,
+      recorrencia: { elegivel: false },
+      _createdAt: new Date().toISOString(),
+      _source: 'cadastro-inteligente'
+    };
+  },
+
+  // === SAVE ===
+  saveProduct() {
+    const product = this.buildProductObject();
+
+    // Save to localStorage
+    const saved = JSON.parse(localStorage.getItem('cdn_custom_products') || '[]');
+    // Check duplicate
+    const idx = saved.findIndex(p => p.id === product.id);
+    if (idx >= 0) saved[idx] = product;
+    else saved.push(product);
+    localStorage.setItem('cdn_custom_products', JSON.stringify(saved));
+
+    // Save image as base64 if we have one
+    if (this.enhancedBlob) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const images = JSON.parse(localStorage.getItem('cdn_product_images') || '{}');
+        images[product.id] = reader.result;
+        localStorage.setItem('cdn_product_images', JSON.stringify(images));
+      };
+      reader.readAsDataURL(this.enhancedBlob);
+    }
+
+    // Update count
+    document.getElementById('success-msg').textContent =
+      `"${product.nome}" salvo com sucesso! Total: ${saved.length} produto(s) cadastrado(s).`;
+
+    this.goToStep(5);
+    this.toast('Produto salvo!');
+
+    // Confetti
+    this.confetti();
+  },
+
+  // === HELPERS ===
+  getVariations() {
+    const rows = document.querySelectorAll('.var-row');
+    const vars = [];
+    rows.forEach(row => {
+      const peso = row.querySelector('.var-peso').value.trim();
+      const preco = parseFloat(row.querySelector('.var-preco').value);
+      if (peso || preco) vars.push({ peso, preco: preco || 0 });
+    });
+    return vars;
+  },
+
+  getSelectedSelos() {
+    return [...document.querySelectorAll('.selo-chip.active')].map(c => c.dataset.selo);
+  },
+
+  slugify(str) {
+    return str.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  },
+
+  toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  },
+
+  reset() {
+    // Clear form
+    document.querySelectorAll('input[type=text],input[type=number],textarea').forEach(el => {
+      el.value = ''; el.classList.remove('auto-filled');
+    });
+    document.querySelectorAll('.selo-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('f-margem').value = '55';
+    document.getElementById('f-est-centro').value = '0';
+    document.getElementById('f-est-shopping').value = '0';
+    document.getElementById('f-est-norte').value = '0';
+    document.getElementById('f-est-minimo').value = '10';
+
+    // Reset variations to one empty row
+    document.getElementById('var-list').innerHTML = `
+      <div class="var-row">
+        <input type="text" placeholder="Peso (ex: 250g)" class="var-peso">
+        <input type="number" step="0.01" placeholder="Preço (R$)" class="var-preco">
+        <button class="var-remove" onclick="this.closest('.var-row').remove()" title="Remover">×</button>
+      </div>`;
+
+    // Reset image
+    this.originalImage = null;
+    this.enhancedBlob = null;
+    this.extractedText = '';
+    document.getElementById('preview-area').style.display = 'none';
+    document.getElementById('capture-zone').style.display = '';
+    document.getElementById('input-camera').value = '';
+    document.getElementById('input-gallery').value = '';
+
+    // Reset enhancements
+    document.getElementById('ctrl-brightness').value = 0;
+    document.getElementById('ctrl-contrast').value = 10;
+    document.getElementById('ctrl-sharpness').value = 30;
+    document.getElementById('ctrl-bg-remove').classList.add('active');
+    document.getElementById('ctrl-auto-enhance').classList.remove('active');
+
+    this.goToStep(1);
+  },
+
+  confetti() {
+    const colors = ['#52B788','#C4972A','#2D6A4F','#E63946','#2196F3'];
+    for (let i = 0; i < 50; i++) {
+      const c = document.createElement('div');
+      c.style.cssText = `position:fixed;width:8px;height:8px;background:${colors[i%colors.length]};
+        top:-10px;left:${Math.random()*100}vw;border-radius:${Math.random()>0.5?'50%':'2px'};
+        z-index:9999;pointer-events:none;opacity:1;
+        animation:confetti-fall ${1.5+Math.random()*2}s ease-out forwards;
+        animation-delay:${Math.random()*0.5}s`;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4000);
+    }
+    if (!document.getElementById('confetti-style')) {
+      const s = document.createElement('style');
+      s.id = 'confetti-style';
+      s.textContent = `@keyframes confetti-fall{to{top:110vh;transform:rotate(${360+Math.random()*720}deg);opacity:0}}`;
+      document.head.appendChild(s);
+    }
+  }
+};
+
+function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+
+// Init
+App.init();
+</script>
+</body>
+</html>

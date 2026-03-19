@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#1B4332">
 <link rel="manifest" href="manifest-pdv.json">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🌿</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
 /* ===== RESET & BASE ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -402,7 +403,55 @@ input{font-family:inherit;outline:none}
   .receipt-actions,.modal-header{display:none!important}
   .modal-overlay{background:none!important}
   .modal{box-shadow:none!important}
+  /* Label printing */
+  #labelPreview,#labelPreview *{visibility:visible!important}
+  #labelPreview{position:fixed;top:0;left:0;width:100%;display:flex!important;flex-wrap:wrap;gap:8px;padding:8px;background:#fff}
 }
+
+/* ===== LABEL PRINTING ===== */
+.product-label{
+  width:220px;border:2px solid #1B4332;border-radius:10px;padding:0;
+  text-align:center;background:#fff;page-break-inside:avoid;
+  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);
+}
+.label-header{
+  background:linear-gradient(135deg,#1B4332 0%,#2D6A4F 100%);
+  padding:10px 12px 8px;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.label-header .label-logo{width:24px;height:24px;object-fit:contain;filter:brightness(10)}
+.label-header .label-brand{color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.label-header .label-brand span{color:#C4972A}
+.label-body{padding:10px 14px 12px}
+.product-label .label-name{
+  font-size:.88rem;font-weight:800;color:#1B4332;margin-bottom:2px;line-height:1.25;
+}
+.product-label .label-variation{
+  font-size:.72rem;color:#616161;margin-bottom:8px;
+  display:inline-block;background:#f0f0f0;padding:2px 8px;border-radius:10px;
+}
+.product-label .label-qr{margin:4px auto 6px;display:flex;justify-content:center}
+.product-label .label-qr svg{border:2px solid #e0e0e0;border-radius:6px;padding:4px;background:#fff}
+.label-price-row{
+  background:linear-gradient(135deg,#2D6A4F,#40916C);
+  margin:0 -14px;padding:8px 14px;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+}
+.product-label .label-price{font-size:1.3rem;font-weight:900;color:#fff;letter-spacing:-.5px}
+.product-label .label-price-cents{font-size:.8rem;font-weight:700;color:rgba(255,255,255,.85)}
+.label-footer{
+  padding:6px 14px 8px;border-top:1px dashed #ccc;
+}
+.product-label .label-barcode{font-size:.6rem;color:#999;font-family:monospace}
+.product-label .label-slogan{font-size:.55rem;color:#999;margin-top:2px;font-style:italic}
+
+.label-product-item{
+  display:flex;align-items:center;justify-content:space-between;padding:8px 12px;
+  border-bottom:1px solid var(--border-light);cursor:pointer;font-size:.88rem;
+  transition:background .15s;
+}
+.label-product-item:hover{background:var(--surface-alt)}
+.label-product-item .lpi-name{font-weight:600}
+.label-product-item .lpi-price{color:var(--primary);font-weight:600}
 
 /* ===== TOAST NOTIFICATION ===== */
 .toast-container{position:fixed;top:70px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px}
@@ -553,6 +602,7 @@ input{font-family:inherit;outline:none}
     <div class="topbar-divider"></div>
     <button class="topbar-btn" onclick="openCaixa()" title="Caixa (Abertura/Fechamento)"><span class="icon">💰</span> Caixa</button>
     <button class="topbar-btn" onclick="openHistory()" title="Histórico de Vendas"><span class="icon">📋</span> Vendas</button>
+    <button class="topbar-btn" onclick="openLabelPrinter()" title="Imprimir Etiquetas"><span class="icon">🏷️</span> Etiquetas</button>
     <button class="topbar-btn" onclick="doLogout()" title="Sair do sistema"><span class="icon">🚪</span> Sair</button>
   </div>
 
@@ -695,7 +745,7 @@ input{font-family:inherit;outline:none}
 <div class="modal-overlay" id="scannerModal">
   <div class="modal scanner-modal">
     <div class="modal-header">
-      <h3>📷 Scanner de Código de Barras</h3>
+      <h3>📷 Scanner de Código de Barras / QR Code</h3>
       <button class="modal-close" onclick="stopScanner()">&times;</button>
     </div>
     <div class="modal-body">
@@ -705,7 +755,7 @@ input{font-family:inherit;outline:none}
         </div>
         <div class="scanner-flash" id="scannerFlash"></div>
       </div>
-      <div class="scanner-result" id="scannerResult">Aponte a câmera para o código de barras</div>
+      <div class="scanner-result" id="scannerResult">Aponte a câmera para o código de barras ou QR code</div>
       <div class="scanner-actions">
         <button class="btn-scan-toggle" id="btnScanToggle" onclick="toggleScanner()">📷 Iniciar Câmera</button>
         <button class="btn-scan-close" onclick="stopScanner()">Fechar</button>
@@ -717,6 +767,38 @@ input{font-family:inherit;outline:none}
           <button onclick="searchManualBarcode()" style="padding:10px 16px;background:var(--primary);color:#fff;border-radius:var(--radius);font-weight:600">Buscar</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LABEL PRINTER MODAL ===== -->
+<div class="modal-overlay" id="labelModal">
+  <div class="modal" style="width:700px;max-width:95vw">
+    <div class="modal-header">
+      <h3>🏷️ Imprimir Etiquetas</h3>
+      <button class="modal-close" onclick="closeModal('labelModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px">
+        <label style="font-size:.82rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Buscar produto</label>
+        <input type="text" id="labelSearch" placeholder="Buscar por nome..." oninput="filterLabelProducts()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.95rem">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:.82rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Variação</label>
+        <select id="labelVariation" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.95rem">
+          <option value="">Selecione um produto primeiro</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
+        <div>
+          <label style="font-size:.82rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Quantidade de etiquetas</label>
+          <input type="number" id="labelQty" value="1" min="1" max="100" style="width:100px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.95rem;text-align:center">
+        </div>
+        <button onclick="generateLabels()" style="margin-top:20px;padding:12px 24px;background:var(--primary);color:#fff;border-radius:var(--radius);font-weight:600;font-size:.95rem">Gerar Etiquetas</button>
+        <button onclick="printLabels()" style="margin-top:20px;padding:12px 24px;background:var(--accent);color:#fff;border-radius:var(--radius);font-weight:600;font-size:.95rem">🖨️ Imprimir</button>
+      </div>
+      <div id="labelProductList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);display:none"></div>
+      <div id="labelPreview" style="margin-top:16px;border:2px dashed var(--border);border-radius:var(--radius);padding:16px;min-height:100px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center"></div>
     </div>
   </div>
 </div>
@@ -1559,10 +1641,72 @@ document.getElementById('loginPhone').addEventListener('input', function(e) {
 
 // ===== BARCODE SCANNER =====
 let scannerActive = false;
+let qrScannerInterval = null;
+
+function startQRScanner() {
+  // Use native BarcodeDetector API if available (Chrome/Edge/Android)
+  if ('BarcodeDetector' in window) {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const video = document.querySelector('#scannerViewport video');
+    if (!video) return;
+
+    qrScannerInterval = setInterval(async () => {
+      if (!scannerActive || !video.videoWidth) return;
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          const code = barcodes[0].rawValue;
+          handleQROrBarcode(code);
+        }
+      } catch(e) {}
+    }, 500);
+  }
+}
+
+function stopQRScanner() {
+  if (qrScannerInterval) {
+    clearInterval(qrScannerInterval);
+    qrScannerInterval = null;
+  }
+}
+
+function handleQROrBarcode(code) {
+  // Check if it's a URL with product ID
+  const urlMatch = code.match(/[?&]produto=([^&]+)/);
+  if (urlMatch) {
+    const productId = urlMatch[1];
+    const product = PDV_PRODUCTS.find(p => p.id === productId);
+    if (product) {
+      // Flash effect
+      const flash = document.getElementById('scannerFlash');
+      flash.classList.add('active');
+      setTimeout(() => flash.classList.remove('active'), 300);
+      if (navigator.vibrate) navigator.vibrate(100);
+
+      document.getElementById('scannerResult').innerHTML = `✅ <strong>${product.nome}</strong> — ${fmt(product.preco)}`;
+
+      if (scannerActive) { Quagga.stop(); scannerActive = false; }
+      stopQRScanner();
+
+      setTimeout(() => {
+        closeModal('scannerModal');
+        if (product.variacoes.length === 1) {
+          addToCart(product, product.variacoes[0]);
+        } else {
+          showVariationPicker(product);
+        }
+      }, 800);
+      return;
+    }
+  }
+
+  // Otherwise treat as barcode
+  handleBarcodeResult(code);
+}
 
 function openScanner() {
   openModal('scannerModal');
-  document.getElementById('scannerResult').textContent = 'Aponte a câmera para o código de barras';
+  document.getElementById('scannerResult').textContent = 'Aponte a câmera para o código de barras ou QR code';
   document.getElementById('manualBarcode').value = '';
 }
 
@@ -1571,6 +1715,7 @@ function stopScanner() {
     Quagga.stop();
     scannerActive = false;
   }
+  stopQRScanner();
   document.getElementById('btnScanToggle').textContent = '📷 Iniciar Câmera';
   closeModal('scannerModal');
 }
@@ -1624,9 +1769,10 @@ function startQuagga() {
       return;
     }
     Quagga.start();
+    startQRScanner();
     scannerActive = true;
     document.getElementById('btnScanToggle').textContent = '⏹️ Parar Câmera';
-    document.getElementById('scannerResult').textContent = '🔍 Escaneando... Aponte para o código de barras';
+    document.getElementById('scannerResult').textContent = '🔍 Escaneando... Aponte para o código de barras ou QR code';
   });
 
   Quagga.onDetected(function(result) {
@@ -1641,8 +1787,8 @@ function startQuagga() {
     // Vibrate on mobile
     if (navigator.vibrate) navigator.vibrate(100);
 
-    // Find product
-    handleBarcodeResult(code);
+    // Find product (check for QR URL or barcode)
+    handleQROrBarcode(code);
   });
 }
 
@@ -1676,7 +1822,7 @@ function handleBarcodeResult(code) {
 function searchManualBarcode() {
   const code = document.getElementById('manualBarcode').value.trim();
   if (!code) return;
-  handleBarcodeResult(code);
+  handleQROrBarcode(code);
 }
 
 // Also handle Enter key on manual barcode input
@@ -1710,6 +1856,132 @@ function setupMobileCart() {
       document.querySelector('.cart-panel')?.classList.remove('cart-open');
     }
   });
+}
+
+// ===== LABEL PRINTER =====
+let selectedLabelProduct = null;
+
+function openLabelPrinter() {
+  selectedLabelProduct = null;
+  document.getElementById('labelSearch').value = '';
+  document.getElementById('labelVariation').innerHTML = '<option value="">Selecione um produto primeiro</option>';
+  document.getElementById('labelPreview').innerHTML = '<div style="color:var(--text-light);text-align:center;width:100%;padding:20px">Selecione um produto e clique em "Gerar Etiquetas"</div>';
+  document.getElementById('labelProductList').style.display = 'none';
+  document.getElementById('labelQty').value = '1';
+  openModal('labelModal');
+}
+
+function filterLabelProducts() {
+  const search = normalizeStr(document.getElementById('labelSearch').value);
+  const listEl = document.getElementById('labelProductList');
+
+  if (!search || search.length < 2) {
+    listEl.style.display = 'none';
+    return;
+  }
+
+  const results = PDV_PRODUCTS.filter(p => normalizeStr(p.nome).includes(search));
+
+  if (results.length === 0) {
+    listEl.style.display = 'block';
+    listEl.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-light)">Nenhum produto encontrado</div>';
+    return;
+  }
+
+  listEl.style.display = 'block';
+  listEl.innerHTML = results.map(p => `
+    <div class="label-product-item" onclick="selectLabelProduct('${p.id}')">
+      <span class="lpi-name">${CAT_ICONS[p.categoria] || ''} ${p.nome}</span>
+      <span class="lpi-price">${fmt(p.preco)}</span>
+    </div>
+  `).join('');
+}
+
+function selectLabelProduct(id) {
+  const product = PDV_PRODUCTS.find(p => p.id === id);
+  if (!product) return;
+
+  selectedLabelProduct = product;
+  document.getElementById('labelSearch').value = product.nome;
+  document.getElementById('labelProductList').style.display = 'none';
+
+  // Populate variations
+  const varSelect = document.getElementById('labelVariation');
+  varSelect.innerHTML = product.variacoes.map((v, i) =>
+    `<option value="${i}">${v.peso} — ${fmt(v.preco)}</option>`
+  ).join('');
+}
+
+function generateQRCodeSVG(text, size) {
+  if (typeof qrcode === 'undefined') return '';
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  return qr.createSvgTag({ cellSize: Math.max(2, Math.floor(size / qr.getModuleCount())), margin: 0 });
+}
+
+function generateLabels() {
+  if (!selectedLabelProduct) {
+    toast('Selecione um produto primeiro', 'error');
+    return;
+  }
+
+  const product = selectedLabelProduct;
+  const varIndex = parseInt(document.getElementById('labelVariation').value) || 0;
+  const variation = product.variacoes[varIndex];
+  const qty = parseInt(document.getElementById('labelQty').value) || 1;
+
+  const qrUrl = `https://clubedonatural.vercel.app/catalogo?produto=${product.id}`;
+  const qrSvg = generateQRCodeSVG(qrUrl, 100);
+
+  const preview = document.getElementById('labelPreview');
+  let html = '';
+
+  // Split price into integer and cents
+  const priceInt = Math.floor(variation.preco);
+  const priceCents = Math.round((variation.preco - priceInt) * 100);
+  const priceFormatted = priceInt.toString();
+  const centsFormatted = priceCents.toString().padStart(2, '0');
+
+  for (let i = 0; i < qty; i++) {
+    html += `
+      <div class="product-label">
+        <div class="label-header">
+          <svg class="label-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 8C20 8 12 12 12 20C12 24 14 27 17 29" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M20 8C20 8 28 12 28 20C28 24 26 27 23 29" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M20 8V32" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M15 16C15 16 18 18 20 14C22 18 25 16 25 16" stroke="#C4972A" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="label-brand">Clube do <span>Natural</span></div>
+        </div>
+        <div class="label-body">
+          <div class="label-name">${product.nome}</div>
+          <div class="label-variation">${variation.peso}</div>
+          <div class="label-qr">${qrSvg}</div>
+        </div>
+        <div class="label-price-row">
+          <span class="label-price">R$ ${priceFormatted},</span>
+          <span class="label-price-cents">${centsFormatted}</span>
+        </div>
+        <div class="label-footer">
+          <div class="label-barcode">${product.barcode || 'CDN-' + product.id.toUpperCase()}</div>
+          <div class="label-slogan">Saúde em cada escolha 🌿</div>
+        </div>
+      </div>
+    `;
+  }
+
+  preview.innerHTML = html;
+}
+
+function printLabels() {
+  const preview = document.getElementById('labelPreview');
+  if (!preview.querySelector('.product-label')) {
+    toast('Gere as etiquetas primeiro', 'error');
+    return;
+  }
+  window.print();
 }
 
 // ===== INIT =====

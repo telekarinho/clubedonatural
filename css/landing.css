@@ -461,6 +461,20 @@
   .recurrence-feature { font-size: var(--fs-xs); }
 }
 
+/* === WHATSAPP FLOAT === */
+#whatsapp-float:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+/* === PROMO BANNER === */
+@media (max-width: 480px) {
+  #promo-banner {
+    font-size: var(--fs-xs) !important;
+    padding: 8px var(--space-3) !important;
+  }
+}
+
 /* === FOOTER === */
 .site-footer {
   background: var(--cinza-900);

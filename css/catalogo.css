@@ -337,6 +337,29 @@
   z-index: 2;
 }
 
+/* Urgency badge — bottom left */
+.product-card__urgency {
+  position: absolute;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  padding: 2px var(--space-2);
+  font-size: 0.6rem;
+  font-weight: var(--fw-bold);
+  border-radius: var(--radius-sm);
+  color: var(--branco);
+  white-space: nowrap;
+  z-index: 2;
+  animation: pulse 2s infinite;
+}
+
+.product-card__urgency--hot {
+  background: linear-gradient(135deg, #FF6B35, #E63946);
+}
+
+.product-card__urgency--low {
+  background: linear-gradient(135deg, #E65100, #BF360C);
+}
+
 /* Card body */
 .product-card__body {
   display: flex;

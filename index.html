@@ -52,6 +52,12 @@
     </div>
   </header>
 
+  <!-- ========== PROMO BANNER ========== -->
+  <div id="promo-banner" style="background:linear-gradient(90deg,var(--verde-escuro),var(--verde-medio));color:#fff;text-align:center;padding:10px var(--space-4);font-size:var(--fs-sm);font-weight:var(--fw-semibold);position:relative;z-index:1;">
+    🎉 Primeira compra? <strong>10% OFF</strong> com o cupom <span style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:4px;font-family:monospace;letter-spacing:1px;">NATURAL10</span>
+    &nbsp;·&nbsp; 🚚 Frete grátis acima de R$89
+  </div>
+
   <!-- ========== HERO ========== -->
   <section class="hero" id="hero">
     <div class="hero-content">
@@ -59,6 +65,18 @@
       <p>
         Catálogo inteligente de produtos naturais: descubra benefícios, receitas, curiosidades e monte sua assinatura com desconto exclusivo.
       </p>
+      <!-- Social proof -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-6);margin-bottom:var(--space-6);flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);opacity:0.95;">
+          <span style="font-size:1.2rem;">⭐</span> <strong>4.9/5</strong> — 847 avaliações
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);opacity:0.95;">
+          <span style="font-size:1.2rem;">✅</span> <strong>+5.000</strong> clientes satisfeitos
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);opacity:0.95;">
+          <span style="font-size:1.2rem;">🏪</span> <strong>5</strong> lojas
+        </div>
+      </div>
       <div class="hero-cta">
         <a href="catalogo.html" class="btn btn-primary btn-lg">🛒 Ver Produtos</a>
         <a href="#assinatura" class="btn btn-secondary btn-lg">🔄 Assinar e Economizar</a>
@@ -315,6 +333,7 @@
       <span class="cart-sidebar__title">🛒 Carrinho</span>
       <button class="cart-sidebar__close" id="cart-close">✕</button>
     </div>
+    <div id="cart-shipping-bar"></div>
     <div class="cart-sidebar__items" id="cart-items"></div>
     <div class="cart-sidebar__empty" id="cart-empty">
       <span class="cart-sidebar__empty-icon">🛒</span>
@@ -335,6 +354,13 @@
   <div class="bottom-sheet" id="product-detail">
     <!-- Rendered dynamically by ProductDetail -->
   </div>
+
+  <!-- ========== WHATSAPP FLOAT ========== -->
+  <a href="https://wa.me/5511999990000?text=Ol%C3%A1!%20Vim%20pelo%20site%20do%20Clube%20do%20Natural" target="_blank" id="whatsapp-float"
+    style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.25);z-index:999;text-decoration:none;transition:transform 200ms ease,box-shadow 200ms ease;"
+    aria-label="WhatsApp">
+    💬
+  </a>
 
   <!-- ========== TOAST ========== -->
   <div id="toast-container" class="toast-container"></div>

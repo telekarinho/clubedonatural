@@ -1,11 +1,19 @@
 /* ============================================
    CLUBE DO NATURAL — Product Card Renderer
-   Classes match catalogo.css exactly
+   Marketing: urgency badges, price anchoring,
+   social proof, desire-driven CTA
    ============================================ */
 
 const ProductCard = {
+  // Mock sales count (deterministic per product)
+  _salesCount(id) {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = ((h << 5) - h) + id.charCodeAt(i);
+    return 12 + Math.abs(h % 95); // 12-106 sales this week
+  },
+
   render(product) {
-    const defaultVariacao = product.variacoes[0];
+    const defaultVariacao = product.variacoes[1] || product.variacoes[0];
     const hasRecurrence = product.recorrencia && product.recorrencia.elegivel;
     const category = DataCategories.find(c => c.id === product.categoria);
 
@@ -14,13 +22,23 @@ const ProductCard = {
       `<span class="badge badge-${selo}">${Utils.seloIcon(selo)} ${Utils.seloLabel(selo)}</span>`
     ).join('');
 
+    // Urgency badge — low stock or best seller
+    let urgencyBadge = '';
+    const totalStock = product.estoque
+      ? Object.values(product.estoque).reduce((a, b) => a + b, 0) : 999;
+    if (totalStock <= 15 && totalStock > 0) {
+      urgencyBadge = `<span class="product-card__urgency product-card__urgency--low">⚡ Últimas ${totalStock} un.</span>`;
+    } else if (product.destaque) {
+      urgencyBadge = `<span class="product-card__urgency product-card__urgency--hot">🔥 Mais vendido</span>`;
+    }
+
     // Recurrence badge
     let recurrenceBadge = '';
     if (hasRecurrence) {
-      recurrenceBadge = `<span class="product-card__recurrence">🔄 Receba todo mês</span>`;
+      recurrenceBadge = `<span class="product-card__recurrence">🔄 Assine -${product.recorrencia.descontoPercent}%</span>`;
     }
 
-    // Subscription price line
+    // Subscription price anchoring
     let subscriptionPrice = '';
     if (hasRecurrence) {
       const savings = Utils.calcSubscriptionSavings(
@@ -28,7 +46,10 @@ const ProductCard = {
         product.recorrencia.descontoPercent,
         product.recorrencia.frequenciaSugerida
       );
-      subscriptionPrice = `<span class="product-card__price-sub">🔄 ${Utils.formatBRL(savings.precoAssinatura)}/mês na assinatura</span>`;
+      subscriptionPrice = `
+        <span class="product-card__price-sub">
+          🔄 ${Utils.formatBRL(savings.precoAssinatura)}/mês na assinatura
+        </span>`;
     }
 
     const card = document.createElement('div');
@@ -38,6 +59,7 @@ const ProductCard = {
       <div class="product-card__image-wrap">
         <div class="product-card__badges">${selosHTML}</div>
         ${recurrenceBadge}
+        ${urgencyBadge}
       </div>
       <div class="product-card__body">
         <span class="product-card__category">${category ? category.icone + ' ' + category.nome : ''}</span>
@@ -48,7 +70,7 @@ const ProductCard = {
         </div>
         ${subscriptionPrice}
         <button class="product-card__add-btn" data-product-id="${product.id}">
-          + Adicionar
+          🛒 Adicionar ${Utils.formatBRL(defaultVariacao.preco)}
         </button>
       </div>
     `;
@@ -60,14 +82,22 @@ const ProductCard = {
       }
     });
 
-    // Quick add button
+    // Quick add button with animation
     const addBtn = card.querySelector('.product-card__add-btn');
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       AppState.addToCart(product, defaultVariacao, 1);
       Toast.success(`${product.nome} adicionado ao carrinho!`);
-      addBtn.style.transform = 'scale(0.95)';
-      setTimeout(() => addBtn.style.transform = '', 150);
+
+      // Micro-animation feedback
+      addBtn.style.transform = 'scale(0.93)';
+      addBtn.textContent = '✓ Adicionado!';
+      addBtn.style.background = 'var(--verde-escuro)';
+      setTimeout(() => {
+        addBtn.style.transform = '';
+        addBtn.textContent = `🛒 Adicionar ${Utils.formatBRL(defaultVariacao.preco)}`;
+        addBtn.style.background = '';
+      }, 1200);
     });
 
     return card;

@@ -1,7 +1,9 @@
 /* ============================================
    CLUBE DO NATURAL — Cart Sidebar
-   Classes match catalogo.css (cart-sidebar__)
+   Marketing: Free shipping bar, order bump
    ============================================ */
+
+const FRETE_GRATIS_MIN = 89; // R$89 for free shipping
 
 const Cart = {
   init() {
@@ -11,20 +13,16 @@ const Cart = {
   },
 
   bindEvents() {
-    // Cart button in header
     document.querySelectorAll('.cart-btn').forEach(btn => {
       btn.addEventListener('click', () => this.toggleSidebar());
     });
 
-    // Close button
     const closeBtn = document.getElementById('cart-close');
     if (closeBtn) closeBtn.addEventListener('click', () => this.closeSidebar());
 
-    // Backdrop
     const backdrop = document.getElementById('cart-backdrop');
     if (backdrop) backdrop.addEventListener('click', () => this.closeSidebar());
 
-    // Checkout button
     const checkoutBtn = document.getElementById('cart-checkout-btn');
     if (checkoutBtn) {
       checkoutBtn.addEventListener('click', () => {
@@ -64,6 +62,29 @@ const Cart = {
     document.body.style.overflow = '';
   },
 
+  // Free shipping progress bar
+  _freeShippingHTML(subtotal) {
+    if (subtotal >= FRETE_GRATIS_MIN) {
+      return `
+        <div style="background:linear-gradient(135deg,#E8F5E9,#C8E6C9);padding:var(--space-3) var(--space-4);text-align:center;">
+          <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--verde-escuro);">🚚 Parabéns! Frete GRÁTIS!</div>
+        </div>`;
+    }
+
+    const remaining = FRETE_GRATIS_MIN - subtotal;
+    const progress = Math.min((subtotal / FRETE_GRATIS_MIN) * 100, 100);
+
+    return `
+      <div style="background:var(--cinza-100);padding:var(--space-3) var(--space-4);">
+        <div style="font-size:var(--fs-xs);color:var(--cinza-700);margin-bottom:var(--space-2);text-align:center;">
+          🚚 Falta <strong style="color:var(--verde-medio);">${Utils.formatBRL(remaining)}</strong> para <strong>frete GRÁTIS</strong>
+        </div>
+        <div style="height:6px;background:var(--cinza-200);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,var(--verde-claro),var(--verde-medio));border-radius:3px;transition:width 400ms ease;"></div>
+        </div>
+      </div>`;
+  },
+
   render() {
     const itemsContainer = document.getElementById('cart-items');
     const emptyState = document.getElementById('cart-empty');
@@ -77,6 +98,9 @@ const Cart = {
       itemsContainer.innerHTML = '';
       if (emptyState) emptyState.style.display = 'block';
       if (footer) footer.style.display = 'none';
+      // Hide shipping bar when empty
+      const shipBar = document.getElementById('cart-shipping-bar');
+      if (shipBar) shipBar.innerHTML = '';
       return;
     }
 
@@ -111,6 +135,10 @@ const Cart = {
     const subtotal = AppState.getCartTotal();
     const totalEl = document.getElementById('cart-total');
     if (totalEl) totalEl.textContent = Utils.formatBRL(subtotal);
+
+    // Free shipping progress bar
+    const shipBar = document.getElementById('cart-shipping-bar');
+    if (shipBar) shipBar.innerHTML = this._freeShippingHTML(subtotal);
 
     // Subscription summary
     const subItems = AppState.getCartSubscriptionItems();

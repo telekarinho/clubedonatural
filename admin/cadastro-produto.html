@@ -144,11 +144,30 @@ input[type=file]{display:none}
 .product-preview-body .desc{font-size:13px;color:var(--text-md);margin-top:8px;line-height:1.4}
 
 /* === SUCCESS === */
-.success-screen{text-align:center;padding:60px 20px}
+.success-screen{text-align:center;padding:40px 20px}
 .success-icon{font-size:80px;margin-bottom:16px;display:block}
 .success-screen h2{font-size:24px;color:var(--primary);margin-bottom:8px}
 .success-screen p{color:var(--text-md);font-size:15px;margin-bottom:24px}
 .success-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* === VIDEO AVATAR === */
+.video-section{background:var(--card);border-radius:var(--radius);padding:24px;margin-top:20px;box-shadow:var(--shadow);text-align:center}
+.video-section h3{font-size:16px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px}
+.video-section p{color:var(--text-md);font-size:13px;margin-bottom:16px}
+.video-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border-radius:var(--radius-sm);font-size:15px;font-weight:700;border:none;cursor:pointer;transition:.2s;background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff}
+.video-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(123,31,162,.3)}
+.video-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.video-preview{margin-top:16px;border-radius:var(--radius-sm);overflow:hidden;background:#000;max-width:400px;margin-left:auto;margin-right:auto}
+.video-preview video{width:100%;display:block}
+.video-status{margin-top:12px;font-size:13px;color:var(--text-md)}
+.video-script{text-align:left;margin:12px 0;padding:12px;background:rgba(0,0,0,.03);border-radius:var(--radius-xs);font-size:12px;color:var(--text-md);max-height:120px;overflow-y:auto;line-height:1.5}
+.video-key-setup{text-align:left;margin-top:16px;padding:16px;background:rgba(0,0,0,.02);border-radius:var(--radius-sm)}
+.video-key-setup h4{font-size:14px;margin-bottom:6px}
+.video-key-setup p{font-size:12px;color:var(--text-md);margin-bottom:10px;line-height:1.5}
+.video-key-setup .key-input-row{display:flex;gap:8px}
+.video-key-setup input{flex:1;padding:10px 14px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:13px;font-family:monospace}
+.video-download{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius-xs);background:var(--primary);color:#fff;text-decoration:none;font-size:13px;font-weight:600;margin-top:8px;transition:.2s}
+.video-download:hover{background:var(--primary-md)}
 
 /* === TOAST === */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--primary);color:#fff;padding:12px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);z-index:9999;transition:.4s;opacity:0;pointer-events:none}
@@ -506,6 +525,34 @@ input[type=file]{display:none}
         <button class="btn btn--outline" onclick="location.href='/admin/'">📊 Painel admin</button>
       </div>
     </div>
+
+    <!-- Video Avatar Section -->
+    <div class="video-section" id="video-section">
+      <h3>🎬 Gerar Vídeo de Apresentação</h3>
+      <p>Um avatar profissional apresenta seu produto em vídeo — perfeito para redes sociais e WhatsApp</p>
+      <div class="video-script" id="video-script"></div>
+      <button class="video-btn" id="btn-gen-video">🎬 Gerar Vídeo com Avatar</button>
+      <div class="video-status" id="video-status"></div>
+      <div class="video-preview" id="video-preview" style="display:none">
+        <video id="video-player" controls></video>
+      </div>
+      <div id="video-download-wrap" style="display:none"></div>
+
+      <!-- D-ID Key Setup -->
+      <div class="video-key-setup" id="did-key-setup" style="display:none">
+        <h4>🔑 Configurar D-ID (5 min grátis)</h4>
+        <p>
+          1. Crie conta grátis em <a href="https://studio.d-id.com" target="_blank" style="color:var(--primary);font-weight:600">studio.d-id.com</a><br>
+          2. Vá em Settings → API Keys → Generate<br>
+          3. Cole a chave abaixo — 5 minutos de vídeo grátis
+        </p>
+        <div class="key-input-row">
+          <input type="password" id="did-api-key" placeholder="Cole sua chave D-ID aqui">
+          <button class="btn btn--primary btn--sm" id="btn-save-did-key">Salvar</button>
+        </div>
+        <div id="did-key-status"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -533,6 +580,7 @@ const App = {
   init() {
     this.bindEvents();
     this.checkApiKey();
+    this.initVideo();
   },
 
   // === NAVIGATION ===
@@ -1106,6 +1154,156 @@ Responda em português brasileiro.`;
     }
   },
 
+  // === VIDEO AVATAR (D-ID) ===
+  didKey: localStorage.getItem('cdn_did_key') || '',
+
+  initVideo() {
+    // Check D-ID key
+    if (!this.didKey) {
+      document.getElementById('did-key-setup').style.display = '';
+    }
+
+    // Save key button
+    document.getElementById('btn-save-did-key').onclick = () => {
+      const key = document.getElementById('did-api-key').value.trim();
+      if (!key) return;
+      localStorage.setItem('cdn_did_key', key);
+      this.didKey = key;
+      document.getElementById('did-key-setup').style.display = 'none';
+      document.getElementById('did-key-status').innerHTML = '<span class="ai-key-saved">✅ Chave salva!</span>';
+      this.toast('Chave D-ID salva!');
+    };
+
+    // Generate video button
+    document.getElementById('btn-gen-video').onclick = () => this.generateVideo();
+  },
+
+  generateVideoScript() {
+    const nome = document.getElementById('f-nome').value || 'este produto';
+    const desc = document.getElementById('f-descricao').value || '';
+    const beneficios = document.getElementById('f-beneficios').value || '';
+    const comoUsar = document.getElementById('f-como-usar').value || '';
+    const curiosidade = document.getElementById('f-curiosidade').value || '';
+
+    let script = `Olá! Hoje eu quero te apresentar ${nome}. `;
+    if (desc) script += `${desc.substring(0, 150)}. `;
+    if (beneficios) {
+      const bList = beneficios.split('\n').filter(Boolean).slice(0, 3);
+      script += `Os principais benefícios são: ${bList.join(', ')}. `;
+    }
+    if (comoUsar) {
+      const uList = comoUsar.split('\n').filter(Boolean).slice(0, 2);
+      script += `Para usar, ${uList[0].toLowerCase()}. `;
+    }
+    if (curiosidade) script += `Uma curiosidade: ${curiosidade.substring(0, 100)}. `;
+    script += `Venha conhecer no Clube do Natural!`;
+
+    // Limit to ~500 chars for free tier
+    return script.substring(0, 500);
+  },
+
+  async generateVideo() {
+    if (!this.didKey) {
+      document.getElementById('did-key-setup').style.display = '';
+      this.toast('Configure sua chave D-ID primeiro!');
+      return;
+    }
+
+    const btn = document.getElementById('btn-gen-video');
+    const status = document.getElementById('video-status');
+    const script = this.generateVideoScript();
+
+    // Show script
+    document.getElementById('video-script').textContent = script;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Gerando vídeo...';
+    status.textContent = 'Criando vídeo com avatar... isso leva 30-60 segundos.';
+
+    try {
+      // Create talk
+      const createRes = await fetch('https://api.d-id.com/talks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${this.didKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          source_url: 'https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.jpeg',
+          script: {
+            type: 'text',
+            input: script,
+            provider: { type: 'microsoft', voice_id: 'pt-BR-FranciscaNeural' }
+          },
+          config: { fluent: true, stitch: true }
+        })
+      });
+
+      if (!createRes.ok) {
+        const err = await createRes.json().catch(() => ({}));
+        if (createRes.status === 401 || createRes.status === 403) {
+          throw new Error('AUTH');
+        }
+        throw new Error(err.description || err.message || `Erro ${createRes.status}`);
+      }
+
+      const talk = await createRes.json();
+      const talkId = talk.id;
+      status.textContent = `Vídeo em processamento (ID: ${talkId})... aguarde.`;
+
+      // Poll for result
+      let attempts = 0;
+      const maxAttempts = 30;
+      const poll = async () => {
+        attempts++;
+        const pollRes = await fetch(`https://api.d-id.com/talks/${talkId}`, {
+          headers: { 'Authorization': `Basic ${this.didKey}` }
+        });
+        const result = await pollRes.json();
+
+        if (result.status === 'done' && result.result_url) {
+          // Video ready!
+          status.textContent = 'Vídeo gerado com sucesso!';
+          btn.textContent = '✅ Vídeo pronto!';
+
+          const preview = document.getElementById('video-preview');
+          const player = document.getElementById('video-player');
+          player.src = result.result_url;
+          preview.style.display = '';
+
+          document.getElementById('video-download-wrap').style.display = '';
+          document.getElementById('video-download-wrap').innerHTML =
+            `<a class="video-download" href="${result.result_url}" target="_blank" download>⬇️ Baixar vídeo</a>`;
+
+          this.toast('Vídeo com avatar gerado!');
+        } else if (result.status === 'error') {
+          throw new Error('Erro ao gerar vídeo: ' + (result.error?.description || 'desconhecido'));
+        } else if (attempts < maxAttempts) {
+          status.textContent = `Processando... (${attempts * 3}s)`;
+          setTimeout(poll, 3000);
+        } else {
+          throw new Error('Timeout — o vídeo demorou muito. Tente novamente.');
+        }
+      };
+
+      setTimeout(poll, 5000);
+
+    } catch (err) {
+      console.error('D-ID Error:', err);
+      btn.disabled = false;
+      btn.textContent = '🎬 Gerar Vídeo com Avatar';
+
+      if (err.message === 'AUTH') {
+        status.textContent = 'Chave D-ID inválida. Reconfigure abaixo.';
+        localStorage.removeItem('cdn_did_key');
+        this.didKey = '';
+        document.getElementById('did-key-setup').style.display = '';
+      } else {
+        status.textContent = `Erro: ${err.message}`;
+      }
+    }
+  },
+
   // === VARIATIONS ===
   addVariation(peso = '', preco = '') {
     const list = document.getElementById('var-list');
@@ -1237,6 +1435,17 @@ Responda em português brasileiro.`;
 
     this.goToStep(5);
     this.toast('Produto salvo!');
+
+    // Populate video script preview
+    const script = this.generateVideoScript();
+    document.getElementById('video-script').textContent = script;
+
+    // Reset video state
+    document.getElementById('btn-gen-video').disabled = false;
+    document.getElementById('btn-gen-video').textContent = '🎬 Gerar Vídeo com Avatar';
+    document.getElementById('video-status').textContent = '';
+    document.getElementById('video-preview').style.display = 'none';
+    document.getElementById('video-download-wrap').style.display = 'none';
 
     // Confetti
     this.confetti();

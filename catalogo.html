@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/landing.css">
   <link rel="stylesheet" href="css/catalogo.css">
+  <link rel="stylesheet" href="css/checkout.css">
   <style>body { font-family: 'Inter', var(--font-family); }</style>
 </head>
 <body>
@@ -174,11 +175,17 @@
     </div>
     <div id="cart-sub-summary"></div>
     <div class="cart-sidebar__footer" id="cart-footer" style="display:none;">
+      <div class="cart-sidebar__shipping-info" id="cart-shipping-info" style="display:none;"></div>
       <div class="cart-sidebar__total">
         <span>Total</span>
         <span id="cart-total">R$ 0,00</span>
       </div>
-      <button class="cart-sidebar__checkout-btn" id="cart-checkout-btn">Finalizar Pedido →</button>
+      <button class="cart-sidebar__checkout-btn" id="cart-checkout-btn">Finalizar Compra &rarr;</button>
+      <button class="cart-sidebar__checkout-btn" id="btn-subscriptions"
+        style="background:transparent;color:var(--verde-medio);border:1px solid var(--verde-medio);margin-top:var(--space-2);font-size:var(--fs-xs);">
+        &#128260; Minhas Assinaturas
+        <span class="badge-count" id="sub-badge" style="display:none;position:static;margin-left:var(--space-2);">0</span>
+      </button>
     </div>
   </aside>
 
@@ -212,6 +219,52 @@
     </div>
   </div>
 
+  <!-- ========== CHECKOUT MODAL ========== -->
+  <div class="ck-backdrop" id="checkout-backdrop"></div>
+  <div class="ck-modal" id="checkout-modal">
+    <div class="ck-modal__inner">
+      <div class="ck-modal__header">
+        <h2>Finalizar Compra</h2>
+        <button class="ck-modal__close" id="ck-modal-close">&times;</button>
+      </div>
+      <div class="ck-stepper">
+        <div class="ck-step-dot active">1</div>
+        <span class="ck-step-label">Carrinho</span>
+        <div class="ck-step-line"></div>
+        <div class="ck-step-dot">2</div>
+        <span class="ck-step-label">Dados</span>
+        <div class="ck-step-line"></div>
+        <div class="ck-step-dot">3</div>
+        <span class="ck-step-label">Pagamento</span>
+        <div class="ck-step-line"></div>
+        <div class="ck-step-dot">4</div>
+        <span class="ck-step-label">Confirma&ccedil;&atilde;o</span>
+      </div>
+      <div class="ck-modal__body">
+        <div class="ck-step-panel active" id="ck-step-1"></div>
+        <div class="ck-step-panel" id="ck-step-2"></div>
+        <div class="ck-step-panel" id="ck-step-3"></div>
+        <div class="ck-step-panel" id="ck-step-4"></div>
+      </div>
+      <div class="ck-modal__nav">
+        <button class="ck-nav-back" id="ck-nav-back" style="display:none;">&larr; Voltar</button>
+        <button class="ck-nav-next" id="ck-nav-next">Continuar &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SUBSCRIPTIONS MODAL ========== -->
+  <div class="ck-backdrop" id="subscriptions-backdrop"></div>
+  <div class="sub-modal" id="subscriptions-modal">
+    <div class="sub-modal__inner">
+      <div class="sub-modal__header">
+        <h2>&#128260; Minhas Assinaturas</h2>
+        <button class="ck-modal__close" id="sub-modal-close">&times;</button>
+      </div>
+      <div class="sub-modal__body" id="subscriptions-panel"></div>
+    </div>
+  </div>
+
   <!-- ========== SCRIPTS (order matters!) ========== -->
   <script src="js/core/storage.js"></script>
   <script src="js/core/state.js"></script>
@@ -226,8 +279,28 @@
   <script src="js/catalogo/product-card.js"></script>
   <script src="js/catalogo/product-detail.js"></script>
   <script src="js/catalogo/cart.js"></script>
+  <script src="js/catalogo/checkout.js"></script>
+  <script src="js/catalogo/subscriptions.js"></script>
   <script src="js/catalogo/search.js"></script>
   <script src="js/catalogo/filters.js"></script>
   <script src="js/pages/catalogo.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => {
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'activated') {
+                  console.log('[SW] Nova versão ativada.');
+                }
+              });
+            });
+          })
+          .catch(err => console.warn('[SW] Registro falhou:', err));
+      });
+    }
+  </script>
 </body>
 </html>

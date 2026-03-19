@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init cart on all pages
   Cart.init();
 
+  // Init checkout & subscriptions
+  if (typeof Checkout !== 'undefined') Checkout.init();
+  if (typeof Subscriptions !== 'undefined') Subscriptions.init();
+
   // === Hamburger Menu Toggle ===
   const hamburgerBtn = document.getElementById('btn-hamburger');
   const mainNav = document.getElementById('main-nav');

@@ -1,15 +1,62 @@
 /* ============================================
-   CLUBE DO NATURAL — Service Worker
-   Cache-first para assets, offline support para POS
+   CLUBE DO NATURAL — Service Worker (PWA)
+   Cache-first for static assets
+   Network-first for API calls
+   Offline fallback page
    ============================================ */
 
-const CACHE_NAME = 'cdn-v1';
-const STATIC_ASSETS = [
+const CACHE_VERSION = 'cdn-v2';
+const OFFLINE_PAGE = '/offline.html';
+
+const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/catalogo.html',
   '/checkout.html',
   '/pedido.html',
+  '/offline.html',
+  '/manifest.json',
+
+  // CSS
+  '/css/variables.css',
+  '/css/base.css',
+  '/css/components.css',
+  '/css/landing.css',
+  '/css/catalogo.css',
+  '/css/checkout.css',
+
+  // JS — core
+  '/js/core/storage.js',
+  '/js/core/state.js',
+  '/js/core/utils.js',
+  '/js/core/auth.js',
+  '/js/core/router.js',
+
+  // JS — data
+  '/js/data/products.js',
+  '/js/data/categories.js',
+  '/js/data/stores.js',
+  '/js/data/employees.js',
+
+  // JS — components & pages
+  '/js/components/toast.js',
+  '/js/catalogo/product-card.js',
+  '/js/catalogo/product-detail.js',
+  '/js/catalogo/cart.js',
+  '/js/catalogo/search.js',
+  '/js/catalogo/filters.js',
+  '/js/pages/landing.js',
+  '/js/pages/catalogo.js',
+  '/js/app.js',
+
+  // Images
+  '/img/logo-full.png',
+  '/img/logo-icon.svg',
+  '/img/logo-icon.png',
+  '/img/logo-icon-white.svg',
+  '/img/logo.svg',
+
+  // Admin
   '/admin/index.html',
   '/admin/pedidos.html',
   '/admin/estoque.html',
@@ -22,128 +69,139 @@ const STATIC_ASSETS = [
   '/admin/relatorios.html',
   '/admin/assinaturas.html',
   '/admin/config.html',
-  '/css/variables.css',
-  '/css/base.css',
-  '/css/components.css',
-  '/css/landing.css',
-  '/css/catalogo.css',
-  '/css/checkout.css',
   '/css/admin.css',
   '/css/dashboard.css',
   '/css/forms.css',
   '/css/tables.css',
-  '/js/core/state.js',
-  '/js/core/storage.js',
-  '/js/core/utils.js',
-  '/js/core/auth.js',
-  '/js/core/router.js',
-  '/js/data/products.js',
-  '/js/data/stores.js',
-  '/js/data/categories.js',
-  '/js/data/employees.js',
-  '/js/components/toast.js',
-  '/js/app.js',
-  '/manifest.json',
 ];
 
-// Install — cache all static assets
+// ── Install: pre-cache critical assets ──────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(STATIC_ASSETS).catch(() => {
-        // Cache what we can, skip failures
-        return Promise.allSettled(
-          STATIC_ASSETS.map(url => cache.add(url).catch(() => null))
-        );
-      });
+    caches.open(CACHE_VERSION).then(cache => {
+      // Use allSettled so one missing file doesn't block the entire install
+      return Promise.allSettled(
+        PRECACHE_ASSETS.map(url => cache.add(url).catch(() => {
+          console.warn('[SW] Failed to cache:', url);
+        }))
+      );
     })
   );
   self.skipWaiting();
 });
 
-// Activate — clean old caches
+// ── Activate: purge old cache versions ──────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter(k => k !== CACHE_VERSION)
+          .map(k => caches.delete(k))
+      )
     )
   );
   self.clients.claim();
 });
 
-// Fetch — Cache-first for static, network-first for API
+// ── Fetch strategy ──────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
+  // Skip non-GET requests (POST, PUT, etc.)
+  if (request.method !== 'GET') return;
 
-  // API calls — network first, fallback to cache
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
+  // Skip cross-origin requests except Google Fonts
+  if (url.origin !== self.location.origin &&
+      !url.hostname.includes('fonts.googleapis.com') &&
+      !url.hostname.includes('fonts.gstatic.com')) {
     return;
   }
 
-  // Static assets — cache first, fallback to network
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback for HTML pages
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/index.html');
-        }
-      });
-    })
-  );
+  // ─── API calls: Network-first, cache fallback ───
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // ─── Static assets: Cache-first, network fallback ───
+  event.respondWith(cacheFirst(request));
 });
 
-// Background sync for offline POS operations
+/**
+ * Cache-first strategy.
+ * Returns cached response if available; otherwise fetches from network,
+ * caches the response, and returns it. Falls back to offline page for
+ * navigation requests.
+ */
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_VERSION);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (err) {
+    // Offline fallback for HTML navigation requests
+    if (request.headers.get('accept')?.includes('text/html')) {
+      const offlinePage = await caches.match(OFFLINE_PAGE);
+      if (offlinePage) return offlinePage;
+    }
+    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+  }
+}
+
+/**
+ * Network-first strategy.
+ * Tries network; on success caches the response. On failure returns
+ * cached version if available.
+ */
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_VERSION);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (err) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// ── Background Sync for offline POS operations ──────────────────
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-orders') {
-    event.waitUntil(syncOfflineOrders());
+    event.waitUntil(notifyClients('orders'));
   }
   if (event.tag === 'sync-caixa') {
-    event.waitUntil(syncOfflineCaixa());
+    event.waitUntil(notifyClients('caixa'));
   }
   if (event.tag === 'sync-estoque') {
-    event.waitUntil(syncOfflineEstoque());
+    event.waitUntil(notifyClients('estoque'));
   }
 });
 
-async function syncOfflineOrders() {
-  // Future: send queued orders to server
-  // For now, data stays in localStorage/IndexedDB
+async function notifyClients(entity) {
   const clients = await self.clients.matchAll();
   clients.forEach(client => {
-    client.postMessage({ type: 'SYNC_COMPLETE', entity: 'orders' });
+    client.postMessage({ type: 'SYNC_COMPLETE', entity });
   });
 }
 
-async function syncOfflineCaixa() {
-  const clients = await self.clients.matchAll();
-  clients.forEach(client => {
-    client.postMessage({ type: 'SYNC_COMPLETE', entity: 'caixa' });
-  });
-}
-
-async function syncOfflineEstoque() {
-  const clients = await self.clients.matchAll();
-  clients.forEach(client => {
-    client.postMessage({ type: 'SYNC_COMPLETE', entity: 'estoque' });
-  });
-}
+// ── Message handler: skip waiting on demand ─────────────────────
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

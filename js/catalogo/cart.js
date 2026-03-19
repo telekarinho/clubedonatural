@@ -31,7 +31,21 @@ const Cart = {
           return;
         }
         this.closeSidebar();
-        window.location.href = 'checkout.html';
+        if (typeof Checkout !== 'undefined') {
+          Checkout.open();
+        } else {
+          window.location.href = 'checkout.html';
+        }
+      });
+    }
+
+    // Subscriptions button
+    const subBtn = document.getElementById('btn-subscriptions');
+    if (subBtn) {
+      subBtn.addEventListener('click', () => {
+        if (typeof Subscriptions !== 'undefined') {
+          Subscriptions.togglePanel();
+        }
       });
     }
   },
@@ -133,8 +147,23 @@ const Cart = {
 
     // Total
     const subtotal = AppState.getCartTotal();
+    const shippingCost = subtotal >= FRETE_GRATIS_MIN ? 0 : 12.90;
+    const totalWithShipping = subtotal + shippingCost;
     const totalEl = document.getElementById('cart-total');
-    if (totalEl) totalEl.textContent = Utils.formatBRL(subtotal);
+    if (totalEl) totalEl.textContent = Utils.formatBRL(totalWithShipping);
+
+    // Shipping info
+    const shippingInfo = document.getElementById('cart-shipping-info');
+    if (shippingInfo) {
+      if (subtotal > 0) {
+        shippingInfo.style.display = 'block';
+        shippingInfo.innerHTML = shippingCost === 0
+          ? '<span style="color:var(--verde-claro);font-weight:var(--fw-bold);">&#9989; Frete gratis!</span>'
+          : `Frete: ${Utils.formatBRL(shippingCost)}`;
+      } else {
+        shippingInfo.style.display = 'none';
+      }
+    }
 
     // Free shipping progress bar
     const shipBar = document.getElementById('cart-shipping-bar');

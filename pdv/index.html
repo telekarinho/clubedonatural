@@ -10,6 +10,14 @@
 <meta name="theme-color" content="#1B4332">
 <link rel="manifest" href="manifest-pdv.json">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🌿</text></svg>">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../js/core/firebase-config.js"></script>
+<script src="../js/core/firebase-auth.js"></script>
+<script>CdnAuth.guard({ requireApproval: true, allowedRoles: ['dono','gerente','caixa','atendente'] });</script>
+
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
 /* ===== RESET & BASE ===== */

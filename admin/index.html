@@ -15,6 +15,29 @@
   <link rel="stylesheet" href="../css/dashboard.css?v=20260318b">
   <link rel="stylesheet" href="../css/forms.css?v=20260318">
   <link rel="stylesheet" href="../css/tables.css?v=20260318">
+  <style>
+    /* User management cards */
+    .users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+    .user-card{background:white;border-radius:12px;padding:16px;border:1px solid #e0e0e0;transition:box-shadow 0.2s}
+    .user-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+    .user-card--pending{border-color:#E63946;border-width:2px;background:#fff8f8}
+    .user-card__header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .user-card__avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0}
+    .user-card__avatar--placeholder{background:#2D6A4F;color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700}
+    .user-card__info{min-width:0;flex:1}
+    .user-card__name{display:block;font-size:15px;color:#1B4332;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .user-card__email{display:block;font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .user-card__meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+    .user-card__role{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
+    .user-card__date{font-size:11px;color:#999}
+    .user-card__actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .user-card__role-select{padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;background:white}
+    .btn--danger{background:#E63946 !important;color:white !important;border:none}
+    .btn--danger:hover{background:#c62828 !important}
+    .btn--danger-ghost{background:none !important;color:#E63946 !important;border:1px solid #E63946 !important;font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer}
+    .btn--danger-ghost:hover{background:#fef2f2 !important}
+    @media(max-width:600px){.users-grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body class="admin-body">
 
@@ -133,6 +156,14 @@
         <a href="#" class="sidebar__link" data-page="relatorios">
           <span class="sidebar__link-icon">📈</span>
           <span class="sidebar__link-text">Relatórios</span>
+        </a>
+
+        <!-- SISTEMA -->
+        <p class="sidebar__group-label">SISTEMA</p>
+        <a href="#" class="sidebar__link" data-page="usuarios">
+          <span class="sidebar__link-icon">🔐</span>
+          <span class="sidebar__link-text">Usuários</span>
+          <span class="sidebar__badge" id="badge-pending-users" style="display:none;background:#E63946">0</span>
         </a>
         <a href="#" class="sidebar__link" data-page="config">
           <span class="sidebar__link-icon">⚙️</span>
@@ -257,6 +288,27 @@
           </div>
         </section>
 
+        <section class="admin-page" data-page="usuarios">
+          <div id="usuarios-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+              <h2 style="margin:0;color:var(--verde-escuro,#1B4332)">🔐 Gestão de Usuários</h2>
+              <button class="btn btn--sm btn--ghost" onclick="UsersAdmin.refresh()">🔄 Atualizar</button>
+            </div>
+
+            <!-- Pending Users -->
+            <div id="pending-users-section" style="display:none;margin-bottom:24px">
+              <h3 style="color:#E63946;font-size:16px;margin-bottom:12px">⏳ Aguardando Aprovação</h3>
+              <div id="pending-users-list" class="users-grid"></div>
+            </div>
+
+            <!-- Approved Users -->
+            <h3 style="color:var(--verde-escuro,#1B4332);font-size:16px;margin-bottom:12px">✅ Usuários Aprovados</h3>
+            <div id="approved-users-list" class="users-grid">
+              <p class="admin-page__placeholder">Carregando usuários...</p>
+            </div>
+          </div>
+        </section>
+
         <section class="admin-page" data-page="config">
           <div id="config-content">
             <h2>Configurações</h2>
@@ -272,6 +324,14 @@
 
   <!-- Sidebar Overlay (mobile) -->
   <div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="../js/core/firebase-config.js"></script>
+  <script src="../js/core/firebase-auth.js"></script>
+  <script>CdnAuth.guard({ requireApproval: true, allowedRoles: ['dono','gerente','atendente','caixa','estoquista'] });</script>
 
   <!-- Core JS -->
   <script src="../js/core/storage.js"></script>
@@ -300,8 +360,32 @@
   <script src="../js/admin/funcionarios.js"></script>
   <script src="../js/admin/clientes.js"></script>
   <script src="../js/admin/relatorios.js"></script>
+  <script src="../js/admin/usuarios.js"></script>
 
   <!-- Admin Bootstrap (must be last) -->
   <script src="../js/admin/admin-app.js"></script>
+
+  <!-- Initialize Firebase-based features after auth guard resolves -->
+  <script>
+    CdnAuth.onReady(function(userData) {
+      // Update logout button to use Firebase
+      const logoutBtn = document.getElementById('btn-logout');
+      if (logoutBtn) {
+        logoutBtn.onclick = function() { CdnAuth.signOut(); };
+      }
+      // Add user badge to header
+      const headerRight = document.querySelector('.admin-header__right');
+      if (headerRight && CdnAuth.currentUser) {
+        const badge = document.createElement('div');
+        badge.style.cssText = 'position:relative;display:flex;align-items:center';
+        badge.innerHTML = CdnAuth.getUserBadge();
+        headerRight.prepend(badge);
+      }
+      // Init users page if dono
+      if (userData.role === 'dono' && typeof UsersAdmin !== 'undefined') {
+        UsersAdmin.init();
+      }
+    });
+  </script>
 </body>
 </html>

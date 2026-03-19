@@ -5,7 +5,7 @@
 
 const Auth = (() => {
   const PERMISSIONS = {
-    dono: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'nf', 'funcionarios', 'produtos', 'lojas', 'clientes', 'relatorios', 'config'],
+    dono: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'nf', 'funcionarios', 'produtos', 'lojas', 'clientes', 'relatorios', 'config', 'usuarios'],
     gerente: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'nf', 'produtos', 'clientes', 'relatorios'],
     atendente: ['pedidos', 'assinaturas'],
     caixa: ['pedidos', 'caixa', 'nf'],

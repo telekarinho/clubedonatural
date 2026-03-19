@@ -5,7 +5,7 @@
    Offline fallback page
    ============================================ */
 
-const CACHE_VERSION = 'cdn-v2';
+const CACHE_VERSION = 'cdn-v3';
 const OFFLINE_PAGE = '/offline.html';
 
 const PRECACHE_ASSETS = [
@@ -26,6 +26,8 @@ const PRECACHE_ASSETS = [
   '/css/checkout.css',
 
   // JS — core
+  '/js/core/firebase-config.js',
+  '/js/core/firebase-auth.js',
   '/js/core/storage.js',
   '/js/core/state.js',
   '/js/core/utils.js',
@@ -56,7 +58,9 @@ const PRECACHE_ASSETS = [
   '/img/logo-icon-white.svg',
   '/img/logo.svg',
 
-  // Admin
+  // Auth & Admin
+  '/login.html',
+  '/admin/setup.html',
   '/admin/index.html',
   '/admin/pedidos.html',
   '/admin/estoque.html',
@@ -73,6 +77,7 @@ const PRECACHE_ASSETS = [
   '/css/dashboard.css',
   '/css/forms.css',
   '/css/tables.css',
+  '/js/admin/usuarios.js',
 ];
 
 // ── Install: pre-cache critical assets ──────────────────────────
@@ -112,10 +117,11 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests (POST, PUT, etc.)
   if (request.method !== 'GET') return;
 
-  // Skip cross-origin requests except Google Fonts
+  // Skip cross-origin requests except Google Fonts & Firebase SDK
   if (url.origin !== self.location.origin &&
       !url.hostname.includes('fonts.googleapis.com') &&
-      !url.hostname.includes('fonts.gstatic.com')) {
+      !url.hostname.includes('fonts.gstatic.com') &&
+      !url.hostname.includes('www.gstatic.com')) {
     return;
   }
 

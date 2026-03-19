@@ -512,6 +512,14 @@
   <div id="toast-container"></div>
 
   <!-- ========== SCRIPTS ========== -->
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/core/firebase-config.js"></script>
+  <script src="js/core/firebase-auth.js"></script>
+  <script>CdnAuth.guard({ requireApproval: true });</script>
+
   <script src="js/core/storage.js"></script>
   <script src="js/core/state.js"></script>
   <script src="js/core/utils.js"></script>

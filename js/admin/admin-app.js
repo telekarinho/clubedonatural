@@ -18,6 +18,7 @@ const AdminApp = (() => {
     clientes: 'Clientes',
     relatorios: 'Relatórios',
     config: 'Configurações',
+    usuarios: 'Usuários',
   };
 
   // DOM references (populated on init)
@@ -256,6 +257,9 @@ const AdminApp = (() => {
         break;
       case 'config':
         // Config page — placeholder for now
+        break;
+      case 'usuarios':
+        if (typeof UsersAdmin !== 'undefined') UsersAdmin.init();
         break;
     }
   }

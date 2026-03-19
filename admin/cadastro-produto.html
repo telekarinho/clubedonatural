@@ -158,6 +158,29 @@ input[type=file]{display:none}
 .spinner{width:40px;height:40px;border:4px solid rgba(0,0,0,.08);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* === AI ANALYSIS === */
+.ai-section{background:linear-gradient(135deg,#1B4332 0%,#2D6A4F 100%);border-radius:var(--radius);padding:20px;margin-top:16px;box-shadow:var(--shadow-lg);color:#fff}
+.ai-section h4{font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.ai-section p{font-size:13px;opacity:.8;margin-bottom:14px}
+.ai-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:var(--radius-sm);font-size:16px;font-weight:700;border:none;cursor:pointer;transition:.2s;background:linear-gradient(135deg,#C4972A,#e6b84d);color:#1a1a1a}
+.ai-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(196,151,42,.4)}
+.ai-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.ai-btn .ai-sparkle{animation:sparkle 1.5s ease infinite}
+@keyframes sparkle{0%,100%{transform:scale(1)}50%{transform:scale(1.2) rotate(10deg)}}
+.ai-mode-toggle{display:flex;gap:6px;margin-bottom:12px}
+.ai-mode-btn{flex:1;padding:10px;border-radius:var(--radius-xs);border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:12px;font-weight:600;cursor:pointer;transition:.2s;text-align:center}
+.ai-mode-btn.active{border-color:var(--accent);background:rgba(196,151,42,.2);color:#fff}
+.ai-status{margin-top:12px;padding:12px;background:rgba(255,255,255,.1);border-radius:var(--radius-xs);font-size:13px;display:none}
+.ai-status.show{display:block}
+.ai-key-setup{background:var(--card);border-radius:var(--radius);padding:20px;margin-top:12px;box-shadow:var(--shadow)}
+.ai-key-setup h4{font-size:14px;margin-bottom:8px;color:var(--text)}
+.ai-key-setup p{font-size:12px;color:var(--text-md);margin-bottom:12px;line-height:1.5}
+.ai-key-setup .key-input-row{display:flex;gap:8px}
+.ai-key-setup input{flex:1;padding:10px 14px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:14px;font-family:monospace}
+.ai-key-setup input:focus{outline:none;border-color:var(--primary-lt)}
+.ai-key-saved{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--primary-bg);color:var(--primary);border-radius:20px;font-size:12px;font-weight:600;margin-top:8px}
+.ai-generated-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:linear-gradient(135deg,#C4972A,#e6b84d);color:#1a1a1a;border-radius:10px;font-size:10px;font-weight:700;margin-left:8px;vertical-align:middle}
+
 /* === RESPONSIVE === */
 @media(max-width:640px){
   .container{padding:12px}
@@ -235,9 +258,37 @@ input[type=file]{display:none}
           <button class="enhance-toggle" id="ctrl-auto-enhance">✨ Auto melhorar</button>
         </div>
       </div>
+      <!-- AI Analysis Section -->
+      <div class="ai-section" id="ai-section">
+        <h4><span class="ai-sparkle">✨</span> Análise com Inteligência Artificial</h4>
+        <p>A IA analisa a foto e gera automaticamente: nome, descrição, benefícios, como usar, curiosidade, selos e mais</p>
+        <div class="ai-mode-toggle">
+          <button class="ai-mode-btn active" data-mode="ai" id="mode-ai">✨ IA Gemini (completo)</button>
+          <button class="ai-mode-btn" data-mode="ocr" id="mode-ocr">🔍 OCR (só texto)</button>
+        </div>
+        <button class="ai-btn" id="btn-ai-analyze">
+          <span class="ai-sparkle">✨</span> Analisar com IA e Preencher Tudo
+        </button>
+        <div class="ai-status" id="ai-status"></div>
+      </div>
+
+      <!-- API Key Setup (hidden by default, shows if no key) -->
+      <div class="ai-key-setup" id="ai-key-setup" style="display:none">
+        <h4>🔑 Configurar chave da IA (grátis)</h4>
+        <p>
+          1. Acesse <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary);font-weight:600">aistudio.google.com/apikey</a><br>
+          2. Clique em "Create API Key" (precisa de conta Google)<br>
+          3. Copie a chave e cole abaixo — é 100% grátis
+        </p>
+        <div class="key-input-row">
+          <input type="password" id="gemini-api-key" placeholder="Cole sua chave aqui (AIza...)">
+          <button class="btn btn--primary btn--sm" id="btn-save-key">Salvar</button>
+        </div>
+        <div id="key-status"></div>
+      </div>
+
       <div class="btn-row" style="margin-top:16px">
-        <button class="btn btn--outline" id="btn-skip-ocr">Pular extração →</button>
-        <button class="btn btn--primary" id="btn-analyze">🔍 Analisar e Extrair Dados</button>
+        <button class="btn btn--outline" id="btn-skip-ocr">Preencher manual →</button>
       </div>
     </div>
   </div>
@@ -476,8 +527,12 @@ const App = {
   extractedText: '',
   productData: {},
 
+  analysisMode: 'ai',  // 'ai' or 'ocr'
+  geminiKey: localStorage.getItem('cdn_gemini_key') || '',
+
   init() {
     this.bindEvents();
+    this.checkApiKey();
   },
 
   // === NAVIGATION ===
@@ -539,9 +594,30 @@ const App = {
       this.applyEnhancements();
     };
 
-    // Analyze
-    document.getElementById('btn-analyze').onclick = () => this.startOCR();
+    // AI / OCR analyze
+    document.getElementById('btn-ai-analyze').onclick = () => {
+      if (this.analysisMode === 'ai') this.startAI();
+      else this.startOCR();
+    };
     document.getElementById('btn-skip-ocr').onclick = () => this.goToStep(3);
+
+    // Mode toggle
+    document.querySelectorAll('.ai-mode-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.ai-mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.analysisMode = btn.dataset.mode;
+        const aiBtn = document.getElementById('btn-ai-analyze');
+        if (this.analysisMode === 'ai') {
+          aiBtn.innerHTML = '<span class="ai-sparkle">✨</span> Analisar com IA e Preencher Tudo';
+        } else {
+          aiBtn.innerHTML = '🔍 Extrair Texto (OCR)';
+        }
+      };
+    });
+
+    // API Key
+    document.getElementById('btn-save-key').onclick = () => this.saveApiKey();
 
     // Form navigation
     document.getElementById('btn-back-photo').onclick = () => this.goToStep(1);
@@ -805,6 +881,228 @@ const App = {
     if (allergMatch) {
       document.getElementById('f-contraindicacoes').value = allergMatch[1].trim();
       document.getElementById('f-contraindicacoes').classList.add('auto-filled');
+    }
+  },
+
+  // === API KEY ===
+  checkApiKey() {
+    const key = localStorage.getItem('cdn_gemini_key');
+    if (key) {
+      this.geminiKey = key;
+      document.getElementById('ai-key-setup').style.display = 'none';
+    } else {
+      document.getElementById('ai-key-setup').style.display = '';
+    }
+  },
+
+  saveApiKey() {
+    const key = document.getElementById('gemini-api-key').value.trim();
+    if (!key || !key.startsWith('AIza')) {
+      document.getElementById('key-status').innerHTML = '<span style="color:var(--danger);font-size:13px">Chave inválida. Deve começar com "AIza..."</span>';
+      return;
+    }
+    localStorage.setItem('cdn_gemini_key', key);
+    this.geminiKey = key;
+    document.getElementById('ai-key-setup').style.display = 'none';
+    document.getElementById('key-status').innerHTML = '<span class="ai-key-saved">✅ Chave salva!</span>';
+    this.toast('Chave da IA salva com sucesso!');
+  },
+
+  // === GEMINI AI ANALYSIS ===
+  async startAI() {
+    if (!this.geminiKey) {
+      document.getElementById('ai-key-setup').style.display = '';
+      this.toast('Configure sua chave grátis do Gemini primeiro!');
+      document.getElementById('gemini-api-key').focus();
+      return;
+    }
+
+    this.goToStep(2);
+    const progressBar = document.getElementById('ocr-progress-bar');
+    const statusText = document.getElementById('ocr-status-text');
+    const rawTextDiv = document.getElementById('ocr-raw-text');
+
+    // Update UI for AI mode
+    document.querySelector('#ocr-status h4').textContent = '✨ Analisando com IA...';
+    statusText.textContent = 'Enviando foto para o Gemini...';
+    progressBar.style.width = '20%';
+
+    try {
+      // Convert canvas to base64
+      const canvas = document.getElementById('photo-canvas');
+      const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+      statusText.textContent = 'IA analisando o produto...';
+      progressBar.style.width = '40%';
+
+      const prompt = `Você é um especialista em produtos naturais. Analise esta foto de um produto e retorne um JSON com as informações extraídas.
+
+IMPORTANTE: Retorne APENAS o JSON, sem markdown, sem \`\`\`, sem explicação. Apenas o objeto JSON puro.
+
+Estrutura esperada:
+{
+  "nome": "Nome completo do produto",
+  "categoria": "uma das: graos, suplementos, chas, temperos, mel, oleos, snacks, higiene, capsulas",
+  "descricao": "Descrição comercial atraente do produto (2-3 frases para vender)",
+  "peso": "peso/quantidade visível na embalagem (ex: 250g, 60 cápsulas)",
+  "codigoBarras": "código de barras se visível, senão vazio",
+  "selos": ["lista de selos aplicáveis: organico, vegano, sem_gluten, sem_lactose, integral, sem_acucar"],
+  "beneficios": ["4-6 benefícios do produto para a saúde, cada um curto e direto"],
+  "comoUsar": ["3-4 dicas de como usar/consumir o produto"],
+  "curiosidade": "Um fato curioso e interessante sobre este produto (para engajamento e compartilhamento)",
+  "contraindicacoes": "Contraindicações ou avisos importantes",
+  "infoNutricional": {
+    "porcao": "porção se visível",
+    "calorias": 0,
+    "proteinas": "0g",
+    "gorduras": "0g",
+    "carboidratos": "0g",
+    "fibras": "0g",
+    "sodio": "0mg"
+  },
+  "ingredientes": "lista de ingredientes se visível"
+}
+
+Se não conseguir identificar algum campo, deixe vazio ou com valor padrão.
+Foque em gerar benefícios, descrição e curiosidade de qualidade — isso é o que vende o produto.
+Responda em português brasileiro.`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: 'image/jpeg', data: base64 } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 2048
+            }
+          })
+        }
+      );
+
+      progressBar.style.width = '70%';
+      statusText.textContent = 'Processando resposta da IA...';
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Erro HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      // Show raw response
+      rawTextDiv.textContent = aiText;
+      rawTextDiv.style.display = 'block';
+
+      progressBar.style.width = '85%';
+      statusText.textContent = 'Preenchendo formulário...';
+
+      // Parse JSON from response (handle possible markdown wrapping)
+      let jsonStr = aiText.trim();
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
+      }
+      const product = JSON.parse(jsonStr);
+
+      // Fill form with AI data
+      this.fillFormWithAI(product);
+
+      progressBar.style.width = '100%';
+      statusText.textContent = 'Dados gerados com sucesso pela IA!';
+
+      setTimeout(() => {
+        this.goToStep(3);
+        this.toast('IA preencheu tudo! Revise e coloque o preço.');
+      }, 800);
+
+    } catch (err) {
+      console.error('AI Error:', err);
+      progressBar.style.width = '0';
+
+      if (err.message.includes('API_KEY') || err.message.includes('401') || err.message.includes('403')) {
+        statusText.textContent = 'Chave inválida. Reconfigure abaixo.';
+        localStorage.removeItem('cdn_gemini_key');
+        this.geminiKey = '';
+        document.getElementById('ai-key-setup').style.display = '';
+      } else {
+        statusText.textContent = `Erro: ${err.message}. Tentando OCR como fallback...`;
+        // Fallback to OCR
+        setTimeout(() => this.startOCR(), 1500);
+        return;
+      }
+    }
+  },
+
+  // === FILL FORM WITH AI DATA ===
+  fillFormWithAI(data) {
+    const setField = (id, value, addBadge = false) => {
+      const el = document.getElementById(id);
+      if (!el || !value) return;
+      el.value = value;
+      el.classList.add('auto-filled');
+    };
+
+    setField('f-nome', data.nome);
+    if (data.categoria) setField('f-categoria', data.categoria);
+    setField('f-descricao', data.descricao);
+    setField('f-barcode', data.codigoBarras);
+
+    // Weight → first variation
+    if (data.peso) {
+      const varPeso = document.querySelector('.var-peso');
+      if (varPeso) { varPeso.value = data.peso; varPeso.classList.add('auto-filled'); }
+    }
+
+    // Selos
+    if (data.selos && Array.isArray(data.selos)) {
+      data.selos.forEach(selo => {
+        const chip = document.querySelector(`.selo-chip[data-selo="${selo}"]`);
+        if (chip) chip.classList.add('active');
+      });
+    }
+
+    // Benefits
+    if (data.beneficios && data.beneficios.length) {
+      setField('f-beneficios', data.beneficios.join('\n'));
+    }
+
+    // How to use
+    if (data.comoUsar && data.comoUsar.length) {
+      setField('f-como-usar', data.comoUsar.join('\n'));
+    }
+
+    setField('f-curiosidade', data.curiosidade);
+    setField('f-contraindicacoes', data.contraindicacoes);
+
+    // Nutritional info
+    if (data.infoNutricional) {
+      const ni = data.infoNutricional;
+      setField('f-porcao', ni.porcao);
+      if (ni.calorias) setField('f-calorias', ni.calorias);
+      setField('f-proteinas', ni.proteinas);
+      setField('f-gorduras', ni.gorduras);
+      setField('f-carboidratos', ni.carboidratos);
+      setField('f-fibras', ni.fibras);
+      setField('f-sodio', ni.sodio);
+    }
+
+    // If ingredients found but no description, use ingredients
+    if (data.ingredientes && !data.descricao) {
+      setField('f-descricao', 'Ingredientes: ' + data.ingredientes);
+    }
+
+    // Add AI badge to form
+    const formTitle = document.querySelector('#sec-form .form-card h3');
+    if (formTitle && !formTitle.querySelector('.ai-generated-badge')) {
+      formTitle.insertAdjacentHTML('beforeend', '<span class="ai-generated-badge">✨ Gerado por IA</span>');
     }
   },
 

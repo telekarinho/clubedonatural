@@ -20,9 +20,10 @@ const AdminLojas = (() => {
   ------------------------------------------ */
   function getStores() {
     const custom = Storage.get('stores_custom') || [];
+    const deleted = new Set(Storage.get('stores_deleted') || []);
     const customIds = new Set(custom.map(s => s.id));
     const merged = [
-      ...DataStores.filter(s => !customIds.has(s.id)),
+      ...DataStores.filter(s => !customIds.has(s.id) && !deleted.has(s.id)),
       ...custom,
     ];
     if (currentStoreFilter && currentStoreFilter !== 'todas') {
@@ -33,9 +34,10 @@ const AdminLojas = (() => {
 
   function getAllStores() {
     const custom = Storage.get('stores_custom') || [];
+    const deleted = new Set(Storage.get('stores_deleted') || []);
     const customIds = new Set(custom.map(s => s.id));
     return [
-      ...DataStores.filter(s => !customIds.has(s.id)),
+      ...DataStores.filter(s => !customIds.has(s.id) && !deleted.has(s.id)),
       ...custom,
     ];
   }
@@ -124,6 +126,8 @@ const AdminLojas = (() => {
         .loja-card__btn:hover { background:#f0f0f0; }
         .loja-card__btn--primary { background:#2D6A4F;color:#fff;border-color:#2D6A4F; }
         .loja-card__btn--primary:hover { background:#1B4332; }
+        .loja-card__btn--danger { background:#fff;color:#C62828;border-color:#C62828; }
+        .loja-card__btn--danger:hover { background:#FFEBEE; }
       </style>
 
       <div class="lojas-header">
@@ -149,6 +153,7 @@ const AdminLojas = (() => {
               <div class="loja-card__actions">
                 <button class="loja-card__btn" data-action="detail" data-id="${s.id}">Ver Detalhes</button>
                 <button class="loja-card__btn loja-card__btn--primary" data-action="editar" data-id="${s.id}">Editar</button>
+                <button class="loja-card__btn loja-card__btn--danger" data-action="excluir" data-id="${s.id}" data-nome="${s.nome}">Excluir</button>
               </div>
             </div>
           `;
@@ -165,6 +170,7 @@ const AdminLojas = (() => {
         const action = btn.dataset.action;
         const id = btn.dataset.id;
         if (action === 'editar') showStoreModal(id);
+        else if (action === 'excluir') deleteStore(id, btn.dataset.nome);
         else if (action === 'detail') {
           detailStoreId = id;
           render(currentStoreFilter);
@@ -290,6 +296,31 @@ const AdminLojas = (() => {
       detailStoreId = null;
       render(currentStoreFilter);
     });
+  }
+
+  /* ------------------------------------------
+     DELETE STORE
+  ------------------------------------------ */
+  function deleteStore(storeId, storeName) {
+    if (!confirm(`Tem certeza que deseja excluir a loja "${storeName}"?\n\nEsta ação não pode ser desfeita.`)) return;
+
+    // Remove from custom stores
+    const custom = Storage.get('stores_custom') || [];
+    const filtered = custom.filter(s => s.id !== storeId);
+    Storage.set('stores_custom', filtered);
+
+    // Also check if it's a default store — mark as deleted
+    const defaultStore = DataStores.find(s => s.id === storeId);
+    if (defaultStore) {
+      const deleted = Storage.get('stores_deleted') || [];
+      if (!deleted.includes(storeId)) {
+        deleted.push(storeId);
+        Storage.set('stores_deleted', deleted);
+      }
+    }
+
+    Toast.success(`Loja "${storeName}" excluída!`);
+    render(currentStoreFilter);
   }
 
   /* ------------------------------------------

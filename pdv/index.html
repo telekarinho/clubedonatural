@@ -16,7 +16,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/core/firebase-config.js"></script>
 <script src="../js/core/firebase-auth.js"></script>
-<script>CdnAuth.guard({ requireApproval: true, allowedRoles: ['dono','gerente','caixa','atendente'] });</script>
+<script>CdnAuth.guard({
+  requireApproval: true,
+  allowedRoles: ['dono','gerente','caixa','atendente'],
+  onReady: function(userData) {
+    // Auto-login PDV with Firebase user data
+    window._firebaseUser = {
+      nome: userData.displayName || CdnAuth.currentUser.displayName || CdnAuth.currentUser.email,
+      cargo: userData.role || 'atendente',
+      email: CdnAuth.currentUser.email
+    };
+  }
+});</script>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
@@ -597,29 +608,8 @@ input{font-family:inherit;outline:none}
 <body>
 
 <!-- ===== LOGIN SCREEN ===== -->
-<div id="loginScreen">
-  <div class="login-card">
-    <img src="../img/logo-full.png" alt="Clube do Natural" class="login-logo-img">
-    <div class="login-logo" style="display:none">Clube do <span style="color:var(--accent)">Natural</span></div>
-    <div class="login-sub">Frente de Caixa — PDV</div>
-    <form id="loginForm" autocomplete="off">
-      <div class="login-field">
-        <label>Telefone</label>
-        <input type="tel" id="loginPhone" placeholder="(11) 99999-0000" required>
-      </div>
-      <div class="login-field">
-        <label>Senha</label>
-        <input type="password" id="loginPassword" placeholder="••••••" required>
-      </div>
-      <button type="submit" class="login-btn">Entrar no PDV</button>
-      <div class="login-error" id="loginError"></div>
-    </form>
-    <div class="login-hint">
-      Sistema de frente de caixa offline.<br>
-      Acesso restrito a funcionários autorizados.
-    </div>
-  </div>
-</div>
+<!-- Login is handled by CdnAuth.guard (Firebase Google login) -->
+<div id="loginScreen" class="hidden"></div>
 
 <!-- ===== MAIN POS APP ===== -->
 <div id="posApp">
@@ -1058,21 +1048,14 @@ async function updateSyncCount() {
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 
-// ===== LOGIN =====
-document.getElementById('loginForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const phone = document.getElementById('loginPhone').value.trim();
-  const pwd = document.getElementById('loginPassword').value;
-  const errEl = document.getElementById('loginError');
-
-  const user = EMPLOYEES.find(u => u.phone === phone && u.senha === pwd);
-  if (!user) {
-    errEl.textContent = 'Telefone ou senha incorretos.';
-    return;
-  }
+// ===== LOGIN (Firebase Auth) =====
+// Auto-login when Firebase auth is ready
+CdnAuth.onReady(function(userData) {
+  var user = window._firebaseUser || {
+    nome: userData.displayName || CdnAuth.currentUser.email,
+    cargo: userData.role || 'atendente'
+  };
   currentUser = user;
-  errEl.textContent = '';
-  document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('posApp').classList.add('active');
   document.getElementById('operatorName').textContent = user.nome + ' (' + user.cargo + ')';
   document.getElementById('searchInput').focus();
@@ -1087,10 +1070,7 @@ function doLogout() {
   cart = [];
   selectedPayment = null;
   document.getElementById('posApp').classList.remove('active');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('loginPhone').value = '';
-  document.getElementById('loginPassword').value = '';
-  renderCart();
+  CdnAuth.signOut();
 }
 
 // ===== CATEGORY PILLS =====

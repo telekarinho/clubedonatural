@@ -33,11 +33,6 @@ const AdminApp = (() => {
   function init() {
     // Cache DOM elements
     els = {
-      loginOverlay: document.getElementById('login-overlay'),
-      loginForm: document.getElementById('login-form'),
-      loginCelular: document.getElementById('login-celular'),
-      loginSenha: document.getElementById('login-senha'),
-      loginError: document.getElementById('login-error'),
       adminShell: document.getElementById('admin-shell'),
       sidebar: document.getElementById('admin-sidebar'),
       sidebarOverlay: document.getElementById('sidebar-overlay'),
@@ -60,10 +55,7 @@ const AdminApp = (() => {
     AppState.restore();
     Toast.init();
 
-    // Apply phone mask to login input
-    Utils.maskPhone(els.loginCelular);
-
-    // Check auth state
+    // Check auth state (uses Firebase Auth via CdnAuth.guard)
     checkAuth();
 
     // Bind events
@@ -91,28 +83,17 @@ const AdminApp = (() => {
   }
 
   /* ------------------------------------------
-     AUTH
+     AUTH (Firebase Google login via CdnAuth)
   ------------------------------------------ */
   function checkAuth() {
     const user = AppState.get('user');
     if (user) {
       showAdminShell(user);
-    } else {
-      showLoginOverlay();
     }
-  }
-
-  function showLoginOverlay() {
-    els.loginOverlay.hidden = false;
-    els.adminShell.hidden = true;
-    els.loginError.hidden = true;
-    els.loginCelular.value = '';
-    els.loginSenha.value = '';
-    els.loginCelular.focus();
+    // If no user yet, CdnAuth.guard onReady will set it and re-trigger
   }
 
   function showAdminShell(user) {
-    els.loginOverlay.hidden = true;
     els.adminShell.hidden = false;
     renderUserInfo(user);
 
@@ -124,37 +105,15 @@ const AdminApp = (() => {
     applyPermissions(user);
   }
 
-  function handleLogin(e) {
-    e.preventDefault();
-    els.loginError.hidden = true;
-
-    const celular = els.loginCelular.value.trim();
-    const senha = els.loginSenha.value.trim();
-
-    if (!celular || !senha) {
-      showLoginError('Preencha celular e senha');
-      return;
-    }
-
-    const result = Auth.login(celular, senha);
-
-    if (result.success) {
-      Toast.success(`Bem-vindo(a), ${result.user.nome}!`);
-      showAdminShell(result.user);
-    } else {
-      showLoginError(result.error);
-    }
-  }
-
-  function showLoginError(msg) {
-    els.loginError.textContent = msg;
-    els.loginError.hidden = false;
-  }
-
   function handleLogout() {
-    Auth.logout();
-    showLoginOverlay();
-    Toast.info('Você saiu do painel');
+    AppState.set('user', null);
+    AppState.set('isAdmin', false);
+    if (typeof Storage !== 'undefined' && Storage.remove) Storage.remove('user');
+    if (typeof CdnAuth !== 'undefined') {
+      CdnAuth.signOut();
+    } else {
+      window.location.href = '/login.html';
+    }
   }
 
   function renderUserInfo(user) {
@@ -373,9 +332,6 @@ const AdminApp = (() => {
      EVENT BINDINGS
   ------------------------------------------ */
   function bindEvents() {
-    // Login form
-    els.loginForm.addEventListener('submit', handleLogin);
-
     // Logout
     els.btnLogout.addEventListener('click', handleLogout);
 

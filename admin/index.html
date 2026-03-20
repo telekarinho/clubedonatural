@@ -41,44 +41,8 @@
 </head>
 <body class="admin-body">
 
-  <!-- ========== LOGIN OVERLAY ========== -->
-  <div id="login-overlay" class="login-overlay">
-    <div class="login-card">
-      <div class="login-card__logo">
-        <span class="login-card__icon"><img src="../img/logo-full.png" alt="Logo Clube do Natural" style="width:64px;height:64px;margin:0 auto;"></span>
-        <h1 class="login-card__title">Clube do Natural</h1>
-        <p class="login-card__subtitle">Acesso restrito</p>
-      </div>
-      <form id="login-form" class="login-form" autocomplete="off">
-        <div class="form-group">
-          <label for="login-celular" class="form-label">Celular</label>
-          <input
-            type="tel"
-            id="login-celular"
-            class="form-input"
-            placeholder="(11) 99999-0001"
-            required
-            autocomplete="tel"
-          >
-        </div>
-        <div class="form-group">
-          <label for="login-senha" class="form-label">Senha</label>
-          <input
-            type="password"
-            id="login-senha"
-            class="form-input"
-            placeholder="Sua senha"
-            required
-            autocomplete="current-password"
-          >
-        </div>
-        <p id="login-error" class="login-error" hidden></p>
-        <button type="submit" class="btn btn--primary btn--full">Entrar</button>
-      </form>
-    </div>
-  </div>
-
   <!-- ========== ADMIN SHELL ========== -->
+  <!-- Auth is handled by CdnAuth.guard (Firebase Google login) -->
   <div id="admin-shell" class="admin-shell" hidden>
 
     <!-- ===== SIDEBAR ===== -->
@@ -331,7 +295,37 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="../js/core/firebase-config.js"></script>
   <script src="../js/core/firebase-auth.js"></script>
-  <script>CdnAuth.guard({ requireApproval: true, allowedRoles: ['dono','gerente','atendente','caixa','estoquista'] });</script>
+  <script>CdnAuth.guard({
+    requireApproval: true,
+    allowedRoles: ['dono','gerente','atendente','caixa','estoquista'],
+    onReady: function(userData) {
+      // Map Firebase user to admin user format
+      var PERMISSIONS = {
+        dono: ['dashboard','pedidos','assinaturas','estoque','caixa','nf','funcionarios','produtos','lojas','clientes','relatorios','config','usuarios'],
+        gerente: ['dashboard','pedidos','assinaturas','estoque','caixa','nf','produtos','clientes','relatorios'],
+        atendente: ['pedidos','assinaturas'],
+        caixa: ['pedidos','caixa','nf'],
+        estoquista: ['estoque','produtos'],
+        motoboy: ['pedidos']
+      };
+      var adminUser = {
+        id: userData.uid || CdnAuth.currentUser.uid,
+        nome: userData.displayName || CdnAuth.currentUser.displayName || CdnAuth.currentUser.email,
+        cargo: userData.role || 'pendente',
+        permissions: PERMISSIONS[userData.role] || [],
+        email: CdnAuth.currentUser.email,
+        photoURL: CdnAuth.currentUser.photoURL
+      };
+      // Store in AppState so admin-app can use it
+      if (typeof AppState !== 'undefined') {
+        AppState.set('user', adminUser);
+        AppState.set('isAdmin', true);
+      }
+      if (typeof Storage !== 'undefined' && Storage.set) {
+        Storage.set('user', adminUser);
+      }
+    }
+  });</script>
 
   <!-- Core JS -->
   <script src="../js/core/storage.js"></script>
@@ -368,15 +362,19 @@
   <!-- Initialize Firebase-based features after auth guard resolves -->
   <script>
     CdnAuth.onReady(function(userData) {
-      // Update logout button to use Firebase
-      const logoutBtn = document.getElementById('btn-logout');
-      if (logoutBtn) {
-        logoutBtn.onclick = function() { CdnAuth.signOut(); };
+      // Show admin shell with Firebase user data
+      var user = AppState.get('user');
+      if (user && typeof AdminApp !== 'undefined') {
+        // Admin shell is already hidden, show it now
+        var shell = document.getElementById('admin-shell');
+        if (shell) shell.hidden = false;
+        // Re-run init to pick up the user
+        AdminApp.navigateTo(AppState.get('activeAdminPage') || 'dashboard');
       }
       // Add user badge to header
-      const headerRight = document.querySelector('.admin-header__right');
+      var headerRight = document.querySelector('.admin-header__right');
       if (headerRight && CdnAuth.currentUser) {
-        const badge = document.createElement('div');
+        var badge = document.createElement('div');
         badge.style.cssText = 'position:relative;display:flex;align-items:center';
         badge.innerHTML = CdnAuth.getUserBadge();
         headerRight.prepend(badge);

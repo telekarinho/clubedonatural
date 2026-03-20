@@ -94,18 +94,23 @@
       }
     },
 
-    // Google sign-in (popup on desktop, redirect on mobile)
+    // Google sign-in — always try popup first (redirect breaks with 3rd-party cookie blocking)
     async signInWithGoogle() {
       if (!CdnFirebase.ready) throw new Error('Firebase não configurado');
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // Mobile browsers block popups — use redirect instead
-      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent);
-      if (isMobile) {
-        return CdnFirebase.auth.signInWithRedirect(provider);
+      try {
+        // Popup works on both desktop and modern mobile browsers
+        return await CdnFirebase.auth.signInWithPopup(provider);
+      } catch (err) {
+        // If popup is blocked (some mobile browsers), fall back to redirect
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+          console.warn('[Auth] Popup blocked, falling back to redirect');
+          return CdnFirebase.auth.signInWithRedirect(provider);
+        }
+        throw err;
       }
-      return CdnFirebase.auth.signInWithPopup(provider);
     },
 
     // Sign out

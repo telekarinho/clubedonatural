@@ -128,9 +128,10 @@ body{
   } else {
     CdnFirebase.init();
     if (CdnFirebase.ready) {
-      // Handle redirect result (mobile login returns here)
+      // Handle redirect result (fallback when popup is blocked)
       CdnFirebase.auth.getRedirectResult().then(async (result) => {
         if (result && result.user) {
+          console.log('[Login] Redirect result OK:', result.user.email);
           const userData = await CdnAuth._ensureUserDoc(result.user);
           if (userData.approved) {
             const params = new URLSearchParams(window.location.search);
@@ -142,7 +143,13 @@ body{
         }
       }).catch((err) => {
         console.error('Redirect result error:', err);
-        showErrorMsg('Erro no login: ' + (err.code || err.message));
+        if (err.code === 'auth/unauthorized-domain') {
+          showErrorMsg('Dominio nao autorizado no Firebase. Adicione seu dominio em Authentication > Settings > Authorized domains no console Firebase.');
+        } else if (err.code === 'auth/web-storage-unsupported') {
+          showErrorMsg('Seu navegador bloqueou o armazenamento necessario para login. Desative o bloqueio de cookies de terceiros nas configuracoes.');
+        } else {
+          showErrorMsg('Erro no login: ' + (err.code || err.message));
+        }
       });
 
       // If already logged in (or just returned from redirect), handle user
@@ -203,6 +210,8 @@ body{
 
     try {
       const result = await CdnAuth.signInWithGoogle();
+      // If redirect was used (fallback), result is undefined — page will reload
+      if (!result || !result.user) return;
       const user = result.user;
 
       // Ensure user doc exists
@@ -248,8 +257,8 @@ body{
 
       let msg = 'Erro ao fazer login. ';
       if (err.code === 'auth/popup-closed-by-user') msg = 'Login cancelado. Tente novamente.';
-      else if (err.code === 'auth/unauthorized-domain') msg = 'Dominio nao autorizado no Firebase. Adicione "clubedonatural.vercel.app" em Authentication > Settings > Authorized domains no console Firebase.';
-      else if (err.code === 'auth/popup-blocked') msg = 'Popup bloqueado. Permita popups para este site ou tente em outro navegador.';
+      else if (err.code === 'auth/unauthorized-domain') msg = 'Dominio nao autorizado no Firebase. Adicione o dominio deste site em Authentication > Settings > Authorized domains no console Firebase (ex: www.clubedonatural.com, clubedonatural.com, clubedonatural.vercel.app).';
+      else if (err.code === 'auth/popup-blocked') msg = 'Popup bloqueado pelo navegador. Tente permitir popups ou use outro navegador.';
       else if (err.code === 'auth/cancelled-popup-request') msg = 'Login cancelado. Tente novamente.';
       else if (err.code === 'auth/network-request-failed') msg = 'Sem internet. Verifique sua conexao.';
       else msg += (err.code || err.message || 'Erro desconhecido');

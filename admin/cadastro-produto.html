@@ -1022,7 +1022,7 @@ const App = {
     };
 
     // AI chat
-    document.getElementById('btn-skip-questions').onclick = () => this.goToStep(3);
+    document.getElementById('btn-skip-questions').onclick = () => this.finishChat();
     document.getElementById('btn-chat-send').onclick = () => this.sendChatAnswer();
     document.getElementById('chat-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.sendChatAnswer();
@@ -1198,17 +1198,28 @@ const App = {
     const q = this.aiQuestions[this.chatCurrentQ];
     this.aiAnswers[q.campo || `q${this.chatCurrentQ}`] = answer;
 
-    // Handle special answers immediately
+    // Handle answers — fill form fields immediately
+    const setField = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val) { el.value = val; el.classList.add('auto-filled'); }
+    };
+
+    if (q.campo === 'nome' && answer) {
+      setField('f-nome', answer);
+    }
+
     if (q.campo === 'codigoBarras') {
       if (answer.includes('Não')) {
         const barcode = this.generateInternalBarcode();
-        document.getElementById('f-barcode').value = barcode;
-        document.getElementById('f-barcode').classList.add('auto-filled');
+        setField('f-barcode', barcode);
         setTimeout(() => this.addChatBubble('ai', `Código interno gerado: ${barcode} ✅`), 400);
-      } else if (answer.includes('Sim')) {
+      } else if (answer.includes('Sim') || answer.includes('foto')) {
         setTimeout(() => {
           this.addChatBubble('ai', 'Quando terminar o chat, clique no botão "📦 Código de barras" na área de fotos e tire a foto. Depois clique em "Analisar com IA" novamente.');
         }, 400);
+      } else if (/^\d{8,14}$/.test(answer.trim())) {
+        // User typed a barcode number directly
+        setField('f-barcode', answer.trim());
       }
     }
 
@@ -1233,8 +1244,28 @@ const App = {
     if (q.campo === 'categoria' && answer) {
       const catMap = {'Grãos':'graos','Suplementos':'suplementos','Chás':'chas','Temperos':'temperos','Mel':'mel','Óleos':'oleos','Snacks':'snacks','Higiene':'higiene','Cápsulas':'capsulas'};
       const cat = catMap[answer] || answer.toLowerCase();
-      document.getElementById('f-categoria').value = cat;
-      document.getElementById('f-categoria').classList.add('auto-filled');
+      setField('f-categoria', cat);
+    }
+
+    if (q.campo === 'beneficios' && answer) {
+      setField('f-beneficios', answer);
+    }
+
+    if (q.campo === 'comoUsar' && answer) {
+      setField('f-como-usar', answer);
+    }
+
+    if (q.campo === 'descricao' && answer) {
+      setField('f-descricao', answer);
+    }
+
+    if (q.campo === 'selos' && answer) {
+      // Activate selo chips matching the answer
+      const selos = answer.split(',').map(s => s.trim().toLowerCase());
+      selos.forEach(selo => {
+        const chip = document.querySelector(`.selo-chip[data-selo="${selo}"]`);
+        if (chip) chip.classList.add('active');
+      });
     }
 
     // Next question after delay

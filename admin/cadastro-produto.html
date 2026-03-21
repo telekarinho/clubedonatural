@@ -734,7 +734,11 @@ const App = {
   productData: {},
 
   analysisMode: 'ai',  // 'ai' or 'ocr'
-  geminiKey: localStorage.getItem('cdn_gemini_key') || 'AIzaSyBsp-lwVCCCGdOl5AiH7CxseiGVqRQlGEw',
+  geminiKeys: [
+    'AIzaSyCVEHDbKSeJB47OimxEypDlQ-vh7QeLV4M',
+    'AIzaSyBsp-lwVCCCGdOl5AiH7CxseiGVqRQlGEw'
+  ],
+  geminiKey: localStorage.getItem('cdn_gemini_key') || 'AIzaSyCVEHDbKSeJB47OimxEypDlQ-vh7QeLV4M',
   extraPhotos: [],        // [{type:'traseira', blob:Blob, dataUrl:string}]
   pendingExtraType: null,  // which extra photo type is being captured
   aiQuestions: [],          // questions AI returned
@@ -1701,6 +1705,15 @@ Responda em português brasileiro.`;
         this.geminiKey = '';
         document.getElementById('ai-key-setup').style.display = '';
       } else if (err.message.includes('429') || err.message.includes('quota') || err.message.includes('RESOURCE_EXHAUSTED')) {
+        // Try next fallback key
+        const currentIdx = this.geminiKeys.indexOf(this.geminiKey);
+        const nextIdx = currentIdx + 1;
+        if (nextIdx < this.geminiKeys.length) {
+          this.geminiKey = this.geminiKeys[nextIdx];
+          statusText.textContent = 'Cota esgotada, tentando chave reserva...';
+          setTimeout(() => this.startAI(isFollowUp), 500);
+          return;
+        }
         statusText.textContent = 'Cota da IA esgotada. Usando análise inteligente local...';
         setTimeout(() => this.startSmartOCR(), 1500);
         return;

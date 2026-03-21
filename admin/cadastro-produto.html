@@ -250,15 +250,27 @@ input[type=file]{display:none}
 .extra-thumb-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;text-align:center;padding:2px;font-weight:600}
 .extra-thumb-remove{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:var(--danger);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
 
-/* === AI QUESTIONS === */
-.ai-questions{background:var(--card);border-radius:var(--radius);padding:20px;margin-top:16px;box-shadow:var(--shadow)}
-.ai-questions h4{font-size:15px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.ai-questions>p{font-size:13px;color:var(--text-md);margin-bottom:16px}
-.ai-question-card{background:rgba(0,0,0,.03);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;border-left:4px solid var(--accent)}
-.ai-question-card label{font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px}
-.ai-question-card input,.ai-question-card select,.ai-question-card textarea{width:100%;padding:8px 12px;border:2px solid rgba(0,0,0,.08);border-radius:var(--radius-xs);font-size:14px;font-family:inherit}
-.ai-question-card textarea{resize:vertical;min-height:60px}
-.ai-questions .btn-row{margin-top:16px}
+/* === AI CHAT (WhatsApp style) === */
+.ai-chat{background:#e5ddd5;border-radius:var(--radius);overflow:hidden;margin-top:16px;box-shadow:var(--shadow-lg)}
+.ai-chat-header{background:var(--primary);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.ai-chat-header .chat-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px}
+.ai-chat-header .chat-name{font-size:14px;font-weight:600}
+.ai-chat-header .chat-status{font-size:11px;opacity:.7}
+.ai-chat-body{padding:16px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5L35 15L25 15Z' fill='%23d4ccc4' opacity='.15'/%3E%3C/svg%3E")}
+.chat-bubble{max-width:85%;padding:8px 12px;border-radius:8px;font-size:14px;line-height:1.4;position:relative;word-wrap:break-word}
+.chat-bubble--ai{background:#fff;color:var(--text);align-self:flex-start;border-top-left-radius:2px;box-shadow:0 1px 1px rgba(0,0,0,.1)}
+.chat-bubble--user{background:#dcf8c6;color:var(--text);align-self:flex-end;border-top-right-radius:2px;box-shadow:0 1px 1px rgba(0,0,0,.1)}
+.chat-bubble .chat-time{font-size:10px;color:var(--text-lt);text-align:right;margin-top:4px}
+.chat-options{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chat-option-btn{padding:8px 16px;border-radius:20px;border:2px solid var(--primary-lt);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.chat-option-btn:hover{background:var(--primary-bg);border-color:var(--primary)}
+.chat-option-btn.selected{background:var(--primary);color:#fff;border-color:var(--primary)}
+.chat-input-bar{display:flex;gap:8px;padding:10px 16px;background:#f0f0f0;border-top:1px solid rgba(0,0,0,.08)}
+.chat-input-bar input{flex:1;padding:10px 16px;border-radius:24px;border:none;font-size:14px;font-family:inherit;background:#fff}
+.chat-input-bar input:focus{outline:none;box-shadow:0 0 0 2px var(--primary-lt)}
+.chat-input-bar button{width:40px;height:40px;border-radius:50%;border:none;background:var(--primary);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.chat-input-bar button:hover{background:var(--primary-md)}
+.chat-typing{align-self:flex-start;background:#fff;padding:8px 16px;border-radius:8px;border-top-left-radius:2px;font-size:13px;color:var(--text-lt);font-style:italic}
 
   .enhance-bar{flex-direction:column}
   .btn-row{flex-direction:column}
@@ -272,7 +284,10 @@ input[type=file]{display:none}
 <div class="topbar">
   <a href="/admin/">← Admin</a>
   <h1>Cadastro Inteligente</h1>
-  <span class="topbar-badge">AI OCR</span>
+  <select id="store-selector" style="padding:6px 10px;border-radius:6px;border:none;font-size:12px;font-weight:600;background:rgba(255,255,255,.15);color:#fff;cursor:pointer">
+    <option value="todas">Todas as lojas</option>
+  </select>
+  <span class="topbar-badge">AI</span>
 </div>
 
 <!-- STEPS -->
@@ -400,14 +415,24 @@ input[type=file]{display:none}
       <div class="ocr-extracted" id="ocr-raw-text"></div>
     </div>
 
-    <!-- AI Questions (shown when AI has doubts) -->
-    <div class="ai-questions" id="ai-questions" style="display:none">
-      <h4>🤔 A IA tem algumas dúvidas</h4>
-      <p>Responda para que o cadastro fique mais completo e preciso:</p>
-      <div id="ai-questions-list"></div>
+    <!-- AI Chat (WhatsApp style) -->
+    <div class="ai-chat" id="ai-chat" style="display:none">
+      <div class="ai-chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div>
+          <div class="chat-name">Assistente Clube do Natural</div>
+          <div class="chat-status">online</div>
+        </div>
+      </div>
+      <div class="ai-chat-body" id="ai-chat-body"></div>
+      <div class="chat-input-bar" id="chat-input-bar">
+        <input type="text" id="chat-input" placeholder="Digite sua resposta...">
+        <button id="btn-chat-send">➤</button>
+      </div>
+    </div>
+    <div id="ai-chat-actions" style="display:none;margin-top:12px">
       <div class="btn-row">
-        <button class="btn btn--outline" id="btn-skip-questions">Pular e continuar →</button>
-        <button class="btn btn--primary" id="btn-answer-questions">✅ Enviar respostas</button>
+        <button class="btn btn--outline" id="btn-skip-questions">Pular e cadastrar →</button>
       </div>
     </div>
   </div>
@@ -715,6 +740,7 @@ input[type=file]{display:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/core/firebase-config.js"></script>
 <script src="../js/core/firebase-auth.js"></script>
+<script src="../js/data/stores.js"></script>
 <script>CdnAuth.guard({ requireApproval: true, allowedRoles: ['dono','gerente','estoquista'] });</script>
 
 <!-- Tesseract.js CDN -->
@@ -748,6 +774,20 @@ const App = {
     this.bindEvents();
     this.checkApiKey();
     this.initVideo();
+    this.loadStores();
+  },
+
+  loadStores() {
+    const sel = document.getElementById('store-selector');
+    // Load from DataStores (static) + custom stores from localStorage
+    const stores = (typeof DataStores !== 'undefined' ? DataStores : []);
+    const custom = JSON.parse(localStorage.getItem('cdn_stores_custom') || '[]');
+    const deleted = JSON.parse(localStorage.getItem('cdn_stores_deleted') || '[]');
+    const all = [...stores, ...custom].filter(s => !deleted.includes(s.id));
+    sel.innerHTML = '<option value="todas">📍 Todas as lojas</option>';
+    all.forEach(s => {
+      sel.innerHTML += `<option value="${s.id}">🏪 ${s.nome.replace('Clube do Natural - ','')}</option>`;
+    });
   },
 
   // === NAVIGATION ===
@@ -935,9 +975,12 @@ const App = {
       e.target.value = '';
     };
 
-    // AI questions
+    // AI chat
     document.getElementById('btn-skip-questions').onclick = () => this.goToStep(3);
-    document.getElementById('btn-answer-questions').onclick = () => this.submitAnswers();
+    document.getElementById('btn-chat-send').onclick = () => this.sendChatAnswer();
+    document.getElementById('chat-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.sendChatAnswer();
+    });
   },
 
   // === IMAGE HANDLING ===
@@ -1021,39 +1064,221 @@ const App = {
     });
   },
 
-  // === AI QUESTIONS ===
+  // === AI CHAT ===
+  chatCurrentQ: 0,
+
   showAIQuestions(questions) {
     if (!questions || questions.length === 0) return false;
     this.aiQuestions = questions;
     this.aiAnswers = {};
-    const container = document.getElementById('ai-questions-list');
-    container.innerHTML = '';
-    questions.forEach((q, i) => {
-      const card = document.createElement('div');
-      card.className = 'ai-question-card';
-      if (q.opcoes && q.opcoes.length > 0) {
-        card.innerHTML = `<label>${q.pergunta}</label><select id="ai-q-${i}"><option value="">Selecione...</option>${q.opcoes.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
-      } else {
-        card.innerHTML = `<label>${q.pergunta}</label><input type="text" id="ai-q-${i}" placeholder="${q.dica || 'Digite aqui...'}">`;
-      }
-      container.appendChild(card);
-    });
-    document.getElementById('ai-questions').style.display = '';
+    this.chatCurrentQ = 0;
+
+    const body = document.getElementById('ai-chat-body');
+    body.innerHTML = '';
+
+    // Opening message
+    this.addChatBubble('ai', 'Olá! Preenchi o que consegui identificar nas fotos. Preciso tirar algumas dúvidas para completar o cadastro 👇');
+
+    // Show first question after a brief delay
+    setTimeout(() => this.showNextChatQuestion(), 600);
+
+    document.getElementById('ai-chat').style.display = '';
+    document.getElementById('ai-chat-actions').style.display = '';
+    document.getElementById('ocr-status').style.display = 'none';
     return true;
   },
 
+  addChatBubble(type, text) {
+    const body = document.getElementById('ai-chat-body');
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble chat-bubble--${type}`;
+    const now = new Date();
+    const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    bubble.innerHTML = `${text}<div class="chat-time">${time}</div>`;
+    body.appendChild(bubble);
+    body.scrollTop = body.scrollHeight;
+    return bubble;
+  },
+
+  showNextChatQuestion() {
+    if (this.chatCurrentQ >= this.aiQuestions.length) {
+      // All questions answered
+      this.addChatBubble('ai', 'Pronto! Vou atualizar o cadastro com suas respostas ✅');
+      document.getElementById('chat-input-bar').style.display = 'none';
+      setTimeout(() => this.finishChat(), 1000);
+      return;
+    }
+
+    const q = this.aiQuestions[this.chatCurrentQ];
+    const bubble = this.addChatBubble('ai', q.pergunta);
+
+    // If has options, add option buttons
+    if (q.opcoes && q.opcoes.length > 0) {
+      const optionsDiv = document.createElement('div');
+      optionsDiv.className = 'chat-options';
+      q.opcoes.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'chat-option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          // Mark selected
+          optionsDiv.querySelectorAll('.chat-option-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          this.handleChatAnswer(opt);
+        };
+        optionsDiv.appendChild(btn);
+      });
+      bubble.appendChild(optionsDiv);
+
+      // Also allow text input
+      document.getElementById('chat-input').placeholder = q.dica || 'Ou digite sua resposta...';
+    } else {
+      document.getElementById('chat-input').placeholder = q.dica || 'Digite sua resposta...';
+    }
+
+    document.getElementById('chat-input').focus();
+    document.getElementById('ai-chat-body').scrollTop = document.getElementById('ai-chat-body').scrollHeight;
+  },
+
+  sendChatAnswer() {
+    const input = document.getElementById('chat-input');
+    const answer = input.value.trim();
+    if (!answer) return;
+    input.value = '';
+    this.handleChatAnswer(answer);
+  },
+
+  handleChatAnswer(answer) {
+    // Show user's answer
+    this.addChatBubble('user', answer);
+
+    const q = this.aiQuestions[this.chatCurrentQ];
+    this.aiAnswers[q.campo || `q${this.chatCurrentQ}`] = answer;
+
+    // Handle special answers immediately
+    if (q.campo === 'codigoBarras') {
+      if (answer.includes('Não')) {
+        const barcode = this.generateInternalBarcode();
+        document.getElementById('f-barcode').value = barcode;
+        document.getElementById('f-barcode').classList.add('auto-filled');
+        setTimeout(() => this.addChatBubble('ai', `Código interno gerado: ${barcode} ✅`), 400);
+      } else if (answer.includes('Sim')) {
+        setTimeout(() => {
+          this.addChatBubble('ai', 'Quando terminar o chat, clique no botão "📦 Código de barras" na área de fotos e tire a foto. Depois clique em "Analisar com IA" novamente.');
+        }, 400);
+      }
+    }
+
+    if (q.campo === 'infoNutricional') {
+      if (answer.includes('Sim')) {
+        setTimeout(() => {
+          this.addChatBubble('ai', 'Quando terminar o chat, clique no botão "📊 Tabela nutricional" na área de fotos e tire a foto. Depois clique em "Analisar com IA" novamente.');
+        }, 400);
+      }
+    }
+
+    if (q.campo === 'peso' && answer) {
+      const varPeso = document.querySelector('.var-peso');
+      if (varPeso) { varPeso.value = answer; varPeso.classList.add('auto-filled'); }
+    }
+
+    if (q.campo === 'categoria' && answer) {
+      const catMap = {'Grãos':'graos','Suplementos':'suplementos','Chás':'chas','Temperos':'temperos','Mel':'mel','Óleos':'oleos','Snacks':'snacks','Higiene':'higiene','Cápsulas':'capsulas'};
+      const cat = catMap[answer] || answer.toLowerCase();
+      document.getElementById('f-categoria').value = cat;
+      document.getElementById('f-categoria').classList.add('auto-filled');
+    }
+
+    // Next question after delay
+    this.chatCurrentQ++;
+    setTimeout(() => this.showNextChatQuestion(), 800);
+  },
+
+  async finishChat() {
+    document.getElementById('ai-chat').style.display = 'none';
+    document.getElementById('ai-chat-actions').style.display = 'none';
+
+    // Check if user needs to take extra photos
+    const needsBarcode = this.aiAnswers.codigoBarras && this.aiAnswers.codigoBarras.includes('Sim');
+    const needsNutri = this.aiAnswers.infoNutricional && this.aiAnswers.infoNutricional.includes('Sim');
+
+    if (needsBarcode || needsNutri) {
+      this.goToStep(1);
+      this.toast('Tire as fotos adicionais e clique em "Analisar com IA" novamente');
+      return;
+    }
+
+    // Check if we have text answers to send back to AI
+    const textAnswers = Object.entries(this.aiAnswers).filter(([k,v]) =>
+      !v.includes('Sim, vou') && !v.includes('Não')
+    );
+
+    if (textAnswers.length > 0) {
+      this.toast('Atualizando cadastro com suas respostas...');
+      await this.startAI(true);
+    } else {
+      this.goToStep(3);
+      this.toast('Cadastro atualizado! Revise e coloque o preço.');
+    }
+  },
+
   async submitAnswers() {
+    let needsExtraPhoto = false;
+    let extraPhotoType = null;
+
     // Collect answers
     this.aiQuestions.forEach((q, i) => {
       const el = document.getElementById(`ai-q-${i}`);
       if (el && el.value.trim()) {
-        this.aiAnswers[q.campo || `q${i}`] = el.value.trim();
+        const answer = el.value.trim();
+        this.aiAnswers[q.campo || `q${i}`] = answer;
+
+        // Handle special barcode answer
+        if (q.campo === 'codigoBarras') {
+          if (answer.includes('Não')) {
+            const barcode = this.generateInternalBarcode();
+            document.getElementById('f-barcode').value = barcode;
+            document.getElementById('f-barcode').classList.add('auto-filled');
+            this.toast(`Código interno gerado: ${barcode}`);
+          } else if (answer.includes('Sim')) {
+            needsExtraPhoto = true;
+            extraPhotoType = 'barcode';
+          }
+        }
+
+        // Handle special nutritional answer
+        if (q.campo === 'infoNutricional') {
+          if (answer.includes('Sim')) {
+            needsExtraPhoto = true;
+            extraPhotoType = 'nutricional';
+          }
+        }
+
+        // Handle weight answer
+        if (q.campo === 'peso' && answer) {
+          const varPeso = document.querySelector('.var-peso');
+          if (varPeso) { varPeso.value = answer; varPeso.classList.add('auto-filled'); }
+        }
       }
     });
-    document.getElementById('ai-questions').style.display = 'none';
 
-    // If we have answers, re-run AI with answers as context
-    if (Object.keys(this.aiAnswers).length > 0) {
+    document.getElementById('ai-chat').style.display = 'none';
+    document.getElementById('ai-chat-actions').style.display = 'none';
+
+    // If user wants to take extra photo, go back to step 1 with capture zone
+    if (needsExtraPhoto) {
+      this.goToStep(1);
+      this.pendingExtraType = extraPhotoType;
+      this.toast(`Tire a foto ${extraPhotoType === 'barcode' ? 'do código de barras' : 'da tabela nutricional'} e clique em "Analisar com IA" novamente`);
+      // Highlight the relevant extra photo button
+      const btn = document.querySelector(`.extra-photo-btn[data-type="${extraPhotoType}"]`);
+      if (btn) { btn.style.animation = 'fadeUp .5s ease 3'; btn.scrollIntoView({behavior:'smooth'}); }
+      return;
+    }
+
+    // If we have text answers, re-run AI with context
+    const textAnswers = Object.entries(this.aiAnswers).filter(([k,v]) => !v.includes('Sim') && !v.includes('Não'));
+    if (textAnswers.length > 0) {
       this.toast('Enviando respostas para a IA...');
       await this.startAI(true);
     } else {
@@ -1534,7 +1759,8 @@ const App = {
     }
 
     this.goToStep(2);
-    document.getElementById('ai-questions').style.display = 'none';
+    document.getElementById('ai-chat').style.display = 'none';
+    document.getElementById('ai-chat-actions').style.display = 'none';
     const progressBar = document.getElementById('ocr-progress-bar');
     const statusText = document.getElementById('ocr-status-text');
     const rawTextDiv = document.getElementById('ocr-raw-text');
@@ -1727,7 +1953,7 @@ Responda em português brasileiro.`;
 
   // === FILL FORM WITH AI DATA ===
   fillFormWithAI(data) {
-    const setField = (id, value, addBadge = false) => {
+    const setField = (id, value) => {
       const el = document.getElementById(id);
       if (!el || !value) return;
       el.value = value;
@@ -1788,6 +2014,63 @@ Responda em português brasileiro.`;
     if (formTitle && !formTitle.querySelector('.ai-generated-badge')) {
       formTitle.insertAdjacentHTML('beforeend', '<span class="ai-generated-badge">✨ Gerado por IA</span>');
     }
+
+    // Auto-detect missing info and add smart questions
+    if (!data.duvidas) data.duvidas = [];
+    this.addSmartQuestions(data);
+  },
+
+  // Auto-generate questions for critical missing fields
+  addSmartQuestions(data) {
+    const duvidas = data.duvidas || [];
+    const hasQ = (campo) => duvidas.some(d => d.campo === campo);
+
+    // Barcode missing?
+    if (!data.codigoBarras && !hasQ('codigoBarras')) {
+      duvidas.push({
+        campo: 'codigoBarras',
+        pergunta: '📦 O produto tem código de barras na embalagem?',
+        dica: 'Se sim, tire uma foto. Se não, vamos gerar um código interno.',
+        opcoes: ['Sim, vou tirar foto do código', 'Não tem código de barras']
+      });
+    }
+
+    // Nutritional info missing?
+    const hasNutri = data.infoNutricional && (data.infoNutricional.porcao || data.infoNutricional.calorias > 0);
+    if (!hasNutri && !hasQ('infoNutricional')) {
+      duvidas.push({
+        campo: 'infoNutricional',
+        pergunta: '📊 O produto tem tabela nutricional na embalagem?',
+        dica: 'Se sim, tire uma foto da tabela para preencher automaticamente.',
+        opcoes: ['Sim, vou tirar foto da tabela', 'Não tem tabela nutricional']
+      });
+    }
+
+    // Weight/quantity missing?
+    if (!data.peso && !hasQ('peso')) {
+      duvidas.push({
+        campo: 'peso',
+        pergunta: '⚖️ Qual o peso ou quantidade do produto?',
+        dica: 'Ex: 250g, 500ml, 60 cápsulas, 1kg',
+        opcoes: []
+      });
+    }
+
+    data.duvidas = duvidas;
+  },
+
+  // Generate internal EAN-13 barcode (prefix 200 = internal use)
+  generateInternalBarcode() {
+    const prefix = '200';
+    const timestamp = Date.now().toString().slice(-9);
+    const partial = prefix + timestamp;
+    // Calculate EAN-13 check digit
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += parseInt(partial[i]) * (i % 2 === 0 ? 1 : 3);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return partial + checkDigit;
   },
 
   // === VIDEO (D-ID + LTX) ===
@@ -2198,10 +2481,17 @@ Responda em português brasileiro.`;
   // === SAVE ===
   saveProduct() {
     const product = this.buildProductObject();
+    const selectedStore = document.getElementById('store-selector').value;
+    product._loja = selectedStore;
+
+    // Auto-generate barcode if still empty
+    if (!product.codigoBarras) {
+      product.codigoBarras = this.generateInternalBarcode();
+      document.getElementById('f-barcode').value = product.codigoBarras;
+    }
 
     // Save to localStorage
     const saved = JSON.parse(localStorage.getItem('cdn_custom_products') || '[]');
-    // Check duplicate
     const idx = saved.findIndex(p => p.id === product.id);
     if (idx >= 0) saved[idx] = product;
     else saved.push(product);
@@ -2218,9 +2508,13 @@ Responda em português brasileiro.`;
       reader.readAsDataURL(this.enhancedBlob);
     }
 
+    // Save to Firestore (per store)
+    this.saveToFirestore(product, selectedStore);
+
     // Update count
+    const lojaLabel = selectedStore === 'todas' ? 'todas as lojas' : selectedStore;
     document.getElementById('success-msg').textContent =
-      `"${product.nome}" salvo com sucesso! Total: ${saved.length} produto(s) cadastrado(s).`;
+      `"${product.nome}" salvo com sucesso para ${lojaLabel}! Total: ${saved.length} produto(s) cadastrado(s).`;
 
     this.goToStep(5);
     this.toast('Produto salvo!');
@@ -2244,6 +2538,55 @@ Responda em português brasileiro.`;
 
     // Confetti
     this.confetti();
+  },
+
+  // === FIRESTORE SAVE ===
+  async saveToFirestore(product, storeId) {
+    try {
+      if (!CdnFirebase || !CdnFirebase.ready) {
+        console.warn('Firestore not ready, skipping cloud save');
+        return;
+      }
+      const db = CdnFirebase.db;
+      const productDoc = { ...product };
+
+      // Remove blob references
+      delete productDoc.enhancedBlob;
+
+      // Save image as base64 URL in the product doc
+      if (this.enhancedBlob) {
+        const reader = new FileReader();
+        const base64Promise = new Promise(resolve => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(this.enhancedBlob);
+        });
+        productDoc.imagem = await base64Promise;
+      }
+
+      if (storeId === 'todas') {
+        // Save to global products collection + each store
+        await db.collection('produtos').doc(product.id).set(productDoc, { merge: true });
+        // Also save reference in each store
+        const stores = (typeof DataStores !== 'undefined' ? DataStores : []);
+        const custom = JSON.parse(localStorage.getItem('cdn_stores_custom') || '[]');
+        const deleted = JSON.parse(localStorage.getItem('cdn_stores_deleted') || '[]');
+        const allStores = [...stores, ...custom].filter(s => !deleted.includes(s.id));
+        for (const store of allStores) {
+          await db.collection('lojas').doc(store.id).collection('produtos').doc(product.id).set(productDoc, { merge: true });
+        }
+      } else {
+        // Save to specific store
+        await db.collection('lojas').doc(storeId).collection('produtos').doc(product.id).set(productDoc, { merge: true });
+        // Also save to global
+        await db.collection('produtos').doc(product.id).set(productDoc, { merge: true });
+      }
+
+      console.log(`[Firestore] Product ${product.id} saved to ${storeId}`);
+    } catch (err) {
+      console.error('[Firestore] Save error:', err);
+      // Product is still saved locally, so don't block the UX
+      this.toast('Salvo localmente. Sincroniza com a nuvem quando possível.');
+    }
   },
 
   // === HELPERS ===
@@ -2306,7 +2649,9 @@ Responda em português brasileiro.`;
     document.getElementById('capture-zone').style.display = '';
     document.getElementById('extra-photos').style.display = 'none';
     document.getElementById('extra-thumbs').innerHTML = '';
-    document.getElementById('ai-questions').style.display = 'none';
+    document.getElementById('ai-chat').style.display = 'none';
+    document.getElementById('ai-chat-actions').style.display = 'none';
+    document.getElementById('chat-input-bar').style.display = '';
     document.querySelectorAll('.extra-photo-btn').forEach(b => b.classList.remove('done'));
     document.getElementById('input-camera').value = '';
     document.getElementById('input-gallery').value = '';

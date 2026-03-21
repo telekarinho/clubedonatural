@@ -32,7 +32,7 @@
 
 /* === STEPPER — Checkout-specific overrides === */
 .checkout-stepper {
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   margin-top: var(--space-6);
@@ -82,7 +82,7 @@
 
 /* === STEP SECTION CARD === */
 .checkout-section {
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: var(--space-6);
@@ -201,7 +201,7 @@
 }
 
 .store-card {
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border: 2px solid var(--cinza-200);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
@@ -241,7 +241,7 @@
 .store-card__name {
   font-size: var(--fs-base);
   font-weight: var(--fw-bold);
-  color: var(--verde-escuro);
+  color: var(--cinza-800);
   margin-bottom: var(--space-2);
 }
 
@@ -527,7 +527,7 @@
 }
 
 .pix-copy-btn:hover {
-  background: var(--verde-escuro);
+  background: var(--neon-green);
 }
 
 /* Card form */
@@ -604,7 +604,7 @@
 
 /* === ORDER SUMMARY SIDEBAR === */
 .order-summary {
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -812,7 +812,7 @@
 }
 
 .checkout-nav .btn-next:hover {
-  background: var(--verde-escuro);
+  background: var(--neon-green);
 }
 
 .checkout-nav .btn-next:disabled {
@@ -934,7 +934,7 @@
 .checkout-empty {
   text-align: center;
   padding: var(--space-12) var(--space-4);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   margin-top: var(--space-8);
@@ -1009,7 +1009,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  background: var(--verde-escuro);
+  background: var(--neon-green);
   color: var(--branco);
   position: sticky;
   top: 0;
@@ -1050,7 +1050,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4) var(--space-5);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   gap: 0;
 }
 
@@ -1137,7 +1137,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-md);
   border: 1px solid var(--cinza-200);
 }
@@ -1190,7 +1190,7 @@
 
 .ck-cart-item__price {
   font-weight: var(--fw-bold);
-  color: var(--verde-escuro);
+  color: var(--cinza-800);
   font-size: var(--fs-sm);
   white-space: nowrap;
   margin-left: var(--space-3);
@@ -1228,7 +1228,7 @@
 
 /* Totals */
 .ck-totals {
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   border: 1px solid var(--cinza-200);
@@ -1275,7 +1275,7 @@
   font-size: 16px;
   font-family: inherit;
   color: var(--cinza-900);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   outline: none;
   transition: border-color var(--transition-fast);
 }
@@ -1286,7 +1286,7 @@
   grid-column: 1 / -1;
   font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
-  color: var(--verde-escuro);
+  color: var(--cinza-800);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: 1px solid var(--cinza-200);
@@ -1357,7 +1357,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-top: 1px solid var(--cinza-200);
   position: sticky;
   bottom: 0;
@@ -1401,7 +1401,7 @@
   min-height: 48px;
   transition: background var(--transition-fast);
 }
-.ck-nav-next:hover { background: var(--verde-escuro); }
+.ck-nav-next:hover { background: var(--neon-green); }
 
 .ck-nav-next.btn-confirm-final {
   background: var(--dourado);
@@ -1438,7 +1438,7 @@
 .ck-pix-area {
   margin: var(--space-5) 0;
   padding: var(--space-5);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--cinza-200);
 }
@@ -1447,7 +1447,7 @@
   text-align: left;
   margin-top: var(--space-5);
   padding: var(--space-5);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--cinza-200);
 }
@@ -1531,7 +1531,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  background: var(--verde-escuro);
+  background: var(--neon-green);
   color: var(--branco);
 }
 
@@ -1556,7 +1556,7 @@
 
 /* Subscription Card */
 .sub-card {
-  background: var(--branco);
+  background: var(--bg-dark-card);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   margin-bottom: var(--space-4);
@@ -1573,7 +1573,7 @@
 
 .sub-card__name {
   font-weight: var(--fw-bold);
-  color: var(--verde-escuro);
+  color: var(--cinza-800);
   font-size: var(--fs-base);
 }
 
@@ -1618,7 +1618,7 @@
   font-size: var(--fs-sm);
   font-family: inherit;
   color: var(--cinza-800);
-  background: var(--branco);
+  background: var(--bg-dark-card);
   cursor: pointer;
   width: fit-content;
 }

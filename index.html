@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1B4332">
+  <meta name="theme-color" content="#FAFAF7">
   <meta name="description" content="Clube do Natural — Produtos naturais selecionados com informações completas. Grãos, suplementos, chás, temperos e muito mais. Assine e economize!">
   <meta property="og:title" content="Clube do Natural — Saúde e Bem-estar">
   <meta property="og:description" content="Catálogo inteligente de produtos naturais. Descubra benefícios, receitas e curiosidades. Entrega rápida!">
@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="css/catalogo.css">
   <link rel="stylesheet" href="css/checkout.css">
   <style>
-    body { font-family: 'Inter', var(--font-family); }
+    body { font-family: 'Plus Jakarta Sans', var(--font-family); }
   </style>
 </head>
 <body>
@@ -54,8 +54,8 @@
   </header>
 
   <!-- ========== PROMO BANNER ========== -->
-  <div id="promo-banner" style="background:linear-gradient(90deg,var(--verde-escuro),var(--verde-medio));color:#fff;text-align:center;padding:10px var(--space-4);font-size:var(--fs-sm);font-weight:var(--fw-semibold);position:relative;z-index:1;">
-    🎉 Primeira compra? <strong>10% OFF</strong> com o cupom <span style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:4px;font-family:monospace;letter-spacing:1px;">NATURAL10</span>
+  <div id="promo-banner" style="background:linear-gradient(90deg,var(--neon-green),var(--neon-green-dim));color:#fff;text-align:center;padding:10px var(--space-4);font-size:var(--fs-sm);font-weight:var(--fw-semibold);position:relative;z-index:1;">
+    🎉 Primeira compra? <strong>10% OFF</strong> com o cupom <span style="background:rgba(0,230,118,0.2);padding:2px 8px;border-radius:4px;font-family:monospace;letter-spacing:1px;color:var(--neon-green);">NATURAL10</span>
     &nbsp;·&nbsp; 🚚 Frete grátis acima de R$89
   </div>
 
@@ -86,7 +86,7 @@
   </section>
 
   <!-- ========== CATEGORIAS ========== -->
-  <section class="section" id="categorias">
+  <section class="section scroll-reveal" id="categorias">
     <div class="container">
       <h2 class="section-title">Explore por Categoria</h2>
       <p class="section-subtitle">Encontre tudo o que você precisa para uma vida mais saudável e natural</p>
@@ -150,7 +150,7 @@
   </section>
 
   <!-- ========== MAIS VENDIDOS ========== -->
-  <section class="section section-bg" id="mais-vendidos">
+  <section class="section section-bg scroll-reveal" id="mais-vendidos">
     <div class="container">
       <h2 class="section-title">🔥 Mais Vendidos</h2>
       <p class="section-subtitle">Os favoritos dos nossos clientes — toque para ver detalhes, benefícios e curiosidades</p>
@@ -162,7 +162,7 @@
   </section>
 
   <!-- ========== BENEFÍCIOS ========== -->
-  <section class="section" id="sobre">
+  <section class="section scroll-reveal" id="sobre">
     <div class="container">
       <h2 class="section-title">Por que escolher o Clube do Natural?</h2>
       <p class="section-subtitle">Mais que uma loja — um catálogo inteligente que te ensina a viver melhor</p>
@@ -220,7 +220,7 @@
   </section>
 
   <!-- ========== CTA RECORRÊNCIA ========== -->
-  <section class="recurrence-cta" id="assinatura">
+  <section class="recurrence-cta scroll-reveal" id="assinatura">
     <div class="container">
       <h2>🔄 Assine e Economize</h2>
       <p>
@@ -251,33 +251,33 @@
   </section>
 
   <!-- ========== NOSSAS LOJAS ========== -->
-  <section class="section" id="lojas">
+  <section class="section scroll-reveal" id="lojas">
     <div class="container">
       <h2 class="section-title">📍 Nossas Lojas</h2>
       <p class="section-subtitle">5 unidades para melhor atender você. Retire na loja e ganhe desconto!</p>
 
       <div class="benefits-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-        <div class="benefit-card" style="background:var(--branco);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:var(--space-5);">
+        <div class="benefit-card" style="background:var(--branco);border:1px solid var(--cinza-200);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);padding:var(--space-5);">
           <div class="benefit-icon" style="background:linear-gradient(135deg,var(--verde-escuro),var(--verde-medio));">🏪</div>
           <h4>Centro</h4>
           <p>Rua das Flores, 123<br>Seg–Sáb 8h–20h</p>
         </div>
-        <div class="benefit-card" style="background:var(--branco);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:var(--space-5);">
+        <div class="benefit-card" style="background:var(--branco);border:1px solid var(--cinza-200);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);padding:var(--space-5);">
           <div class="benefit-icon" style="background:linear-gradient(135deg,var(--verde-escuro),var(--verde-medio));">🏬</div>
           <h4>Shopping Natural</h4>
           <p>Av. Principal, 456<br>Seg–Dom 10h–22h</p>
         </div>
-        <div class="benefit-card" style="background:var(--branco);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:var(--space-5);">
+        <div class="benefit-card" style="background:var(--branco);border:1px solid var(--cinza-200);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);padding:var(--space-5);">
           <div class="benefit-icon" style="background:linear-gradient(135deg,var(--verde-escuro),var(--verde-medio));">🌳</div>
           <h4>Zona Norte</h4>
           <p>Rua Verde, 789<br>Seg–Sáb 8h–19h</p>
         </div>
-        <div class="benefit-card" style="background:var(--branco);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:var(--space-5);">
+        <div class="benefit-card" style="background:var(--branco);border:1px solid var(--cinza-200);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);padding:var(--space-5);">
           <div class="benefit-icon" style="background:linear-gradient(135deg,var(--verde-escuro),var(--verde-medio));">🌻</div>
           <h4>Zona Sul</h4>
           <p>Av. Saúde, 321<br>Seg–Sáb 8h–19h</p>
         </div>
-        <div class="benefit-card" style="background:var(--branco);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:var(--space-5);">
+        <div class="benefit-card" style="background:var(--branco);border:1px solid var(--cinza-200);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);padding:var(--space-5);">
           <div class="benefit-icon" style="background:linear-gradient(135deg,var(--verde-escuro),var(--verde-medio));">🏖️</div>
           <h4>Praia</h4>
           <p>Av. Beira Mar, 100<br>Seg–Dom 9h–21h</p>
@@ -355,7 +355,7 @@
       </div>
       <button class="cart-sidebar__checkout-btn" id="cart-checkout-btn">Finalizar Compra &rarr;</button>
       <button class="cart-sidebar__checkout-btn" id="btn-subscriptions"
-        style="background:transparent;color:var(--verde-medio);border:1px solid var(--verde-medio);margin-top:var(--space-2);font-size:var(--fs-xs);">
+        style="background:transparent;color:var(--neon-green);border:1px solid var(--neon-green);margin-top:var(--space-2);font-size:var(--fs-xs);">
         &#128260; Minhas Assinaturas
         <span class="badge-count" id="sub-badge" style="display:none;position:static;margin-left:var(--space-2);">0</span>
       </button>
@@ -462,6 +462,12 @@
   <script src="js/pages/landing.js"></script>
   <script src="js/app.js"></script>
   <script>
+    // Scroll reveal animation
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('revealed'); revealObserver.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.scroll-reveal').forEach(el => revealObserver.observe(el));
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')

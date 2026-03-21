@@ -21,7 +21,7 @@ body {
   font-size: var(--fs-base);
   line-height: var(--lh-normal);
   color: var(--cinza-800);
-  background-color: var(--bege);
+  background-color: var(--bg-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -40,7 +40,7 @@ a {
 }
 
 a:hover {
-  color: var(--verde-escuro);
+  color: var(--verde-claro);
 }
 
 button {
@@ -58,7 +58,7 @@ input, select, textarea {
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   background: var(--branco);
-  color: var(--cinza-800);
+  color: var(--cinza-900);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   width: 100%;
   min-height: 44px;
@@ -66,8 +66,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--verde-medio);
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+  border-color: var(--neon-green);
+  box-shadow: 0 0 0 3px var(--neon-green-glow);
 }
 
 ul, ol {
@@ -234,12 +234,36 @@ h6 { font-size: var(--fs-base); }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--cinza-400); border-radius: var(--radius-full); }
-::-webkit-scrollbar-thumb:hover { background: var(--cinza-500); }
+::-webkit-scrollbar-thumb:hover { background: var(--neon-green-dim); }
 
 /* === SELECTION === */
 ::selection {
-  background: var(--verde-claro);
+  background: var(--neon-green);
   color: var(--branco);
+}
+
+/* === SCROLL REVEAL === */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+.scroll-reveal:nth-child(2) { transition-delay: 0.1s; }
+.scroll-reveal:nth-child(3) { transition-delay: 0.2s; }
+.scroll-reveal:nth-child(4) { transition-delay: 0.3s; }
+.scroll-reveal:nth-child(5) { transition-delay: 0.4s; }
+.scroll-reveal:nth-child(6) { transition-delay: 0.5s; }
+.scroll-reveal:nth-child(7) { transition-delay: 0.6s; }
+.scroll-reveal:nth-child(8) { transition-delay: 0.7s; }
+.scroll-reveal:nth-child(9) { transition-delay: 0.8s; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, -20px); }
 }
 
 /* === SR ONLY (acessibilidade) === */

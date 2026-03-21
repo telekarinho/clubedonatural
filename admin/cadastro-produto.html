@@ -1887,9 +1887,9 @@ Responda em português brasileiro.`;
       const data = await response.json();
 
       // Handle multiple parts (gemini-2.5 may return thinking + response)
-      const parts = data.candidates?.[0]?.content?.parts || [];
+      const responseParts = data.candidates?.[0]?.content?.parts || [];
       let aiText = '';
-      for (const part of parts) {
+      for (const part of responseParts) {
         if (part.text) aiText = part.text; // Last text part is the actual response
       }
       if (!aiText) throw new Error('IA não retornou resposta');

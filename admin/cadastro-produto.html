@@ -351,6 +351,7 @@ input[type=file]{display:none}
         </div>
         <div class="preview-canvas-wrap">
           <canvas id="photo-canvas"></canvas>
+          <div id="bg-status" style="display:none;position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:5">🤖 Removendo fundo com IA...</div>
         </div>
         <div class="enhance-pro-bar">
           <span class="pro-label">Foto Pro</span>
@@ -775,6 +776,14 @@ input[type=file]{display:none}
 <!-- Tesseract.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
+<!-- AI Background Removal (runs locally in browser, free) -->
+<script type="module" id="bg-removal-loader">
+import { removeBackground } from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
+window._removeBackground = removeBackground;
+window._bgRemovalReady = true;
+console.log('[BG Removal] AI model loaded');
+</script>
+
 <script>
 /* ============================================
    CLUBE DO NATURAL — Cadastro Inteligente
@@ -930,6 +939,7 @@ const App = {
     document.getElementById('btn-retake').onclick = () => {
       document.getElementById('preview-area').style.display = 'none';
       document.getElementById('capture-zone').style.display = '';
+      this._bgRemovedBlob = null;
       this.closeCamera();
       inputCam.value = ''; inputGal.value = '';
     };
@@ -940,6 +950,7 @@ const App = {
     document.getElementById('ctrl-sharpness').oninput = () => this.applyEnhancements();
     document.getElementById('ctrl-bg-remove').onclick = (e) => {
       e.target.classList.toggle('active');
+      this._bgRemovedBlob = null; // reset cache to re-process
       this.applyEnhancements();
     };
     document.getElementById('ctrl-auto-enhance').onclick = (e) => {
@@ -1032,7 +1043,9 @@ const App = {
         document.getElementById('capture-zone').style.display = 'none';
         document.getElementById('preview-area').style.display = '';
 
-        // Apply professional e-commerce photo processing
+        // Reset cached bg removal for new photo
+        this._bgRemovedBlob = null;
+        // Apply professional e-commerce photo processing (async — AI bg removal)
         this.applyEnhancements();
 
         // Show extra photos section
@@ -1040,9 +1053,8 @@ const App = {
 
         // Auto-start AI analysis if key is configured
         if (this.geminiKey) {
-          this.toast('Foto profissional pronta! Adicione fotos extras ou clique "Analisar com IA"');
-          // Don't auto-start — let user add extra photos (nutricional, barcode, etc.) first
-          // The AI button is visible and ready in the ai-section below
+          this.toast('Foto capturada! Analisando com IA...');
+          setTimeout(() => this.startAI(), 500);
         } else {
           this.toast('Foto capturada! Configure a chave da IA para análise automática.');
           document.getElementById('ai-key-setup').style.display = '';
@@ -1415,7 +1427,9 @@ Retorne APENAS este JSON:
   },
 
   // === IMAGE ENHANCEMENT (Professional E-commerce) ===
-  applyEnhancements() {
+  _bgRemovedBlob: null,  // cached AI-removed background
+
+  async applyEnhancements() {
     const canvas = document.getElementById('photo-canvas');
     const ctx = canvas.getContext('2d');
     const img = this.originalImage;
@@ -1431,8 +1445,6 @@ Retorne APENAS este JSON:
     canvas.width = w;
     canvas.height = h;
 
-    ctx.drawImage(img, 0, 0, w, h);
-
     const brightness = +document.getElementById('ctrl-brightness').value;
     const contrast = +document.getElementById('ctrl-contrast').value;
     const sharpness = +document.getElementById('ctrl-sharpness').value;
@@ -1441,220 +1453,150 @@ Retorne APENAS este JSON:
     const addShadow = document.getElementById('ctrl-shadow').classList.contains('active');
     const bgStyle = this.selectedBg || 'white';
 
-    // Step 1: Apply brightness, contrast, and auto-enhance
+    // Step 1: AI Background Removal (if enabled and not cached)
+    if (removeBg && !this._bgRemovedBlob && window._bgRemovalReady) {
+      this.toast('🤖 IA removendo fundo... aguarde');
+      const statusEl = document.getElementById('bg-status');
+      if (statusEl) { statusEl.textContent = 'Removendo fundo com IA...'; statusEl.style.display = ''; }
+      try {
+        // Get image blob for AI processing
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = w; tempCanvas.height = h;
+        tempCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const srcBlob = await new Promise(r => tempCanvas.toBlob(r, 'image/png'));
+
+        this._bgRemovedBlob = await window._removeBackground(srcBlob, {
+          output: { format: 'image/png', quality: 0.9 }
+        });
+        if (statusEl) statusEl.style.display = 'none';
+        this.toast('Fundo removido com sucesso!');
+      } catch (err) {
+        console.error('BG removal error:', err);
+        if (statusEl) statusEl.style.display = 'none';
+        this.toast('Erro ao remover fundo, usando foto original');
+      }
+    }
+
+    // Step 2: Draw base (background-removed or original)
+    if (removeBg && this._bgRemovedBlob) {
+      // Draw professional background first
+      this._drawBackground(ctx, w, h, bgStyle);
+
+      // Draw shadow
+      if (addShadow) this._drawShadow(ctx, w, h);
+
+      // Draw the AI-extracted product on top
+      const bgImg = new Image();
+      await new Promise((resolve) => {
+        bgImg.onload = resolve;
+        bgImg.src = URL.createObjectURL(this._bgRemovedBlob);
+      });
+      ctx.drawImage(bgImg, 0, 0, w, h);
+      URL.revokeObjectURL(bgImg.src);
+    } else {
+      // No bg removal — draw original
+      ctx.drawImage(img, 0, 0, w, h);
+    }
+
+    // Step 3: Apply brightness, contrast, auto-enhance
     let imageData = ctx.getImageData(0, 0, w, h);
     let data = imageData.data;
-
     const bFactor = brightness * 2;
     const cFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
     for (let i = 0; i < data.length; i += 4) {
+      if (data[i+3] === 0) continue; // skip transparent
       let r = data[i], g = data[i+1], b = data[i+2];
-      // Brightness & Contrast
       r = clamp(cFactor * (r + bFactor - 128) + 128);
       g = clamp(cFactor * (g + bFactor - 128) + 128);
       b = clamp(cFactor * (b + bFactor - 128) + 128);
-      // Auto-enhance: boost vibrance (increase saturation of less-saturated colors)
       if (autoEnhance) {
         const avg = (r + g + b) / 3;
         const maxC = Math.max(r,g,b), minC = Math.min(r,g,b);
         const sat = maxC > 0 ? (maxC - minC) / maxC : 0;
         if (sat < 0.6 && sat > 0.05) {
-          const boost = 1.3;
-          r = clamp(avg + (r - avg) * boost);
-          g = clamp(avg + (g - avg) * boost);
-          b = clamp(avg + (b - avg) * boost);
+          r = clamp(avg + (r - avg) * 1.3);
+          g = clamp(avg + (g - avg) * 1.3);
+          b = clamp(avg + (b - avg) * 1.3);
         }
       }
       data[i] = r; data[i+1] = g; data[i+2] = b;
     }
     ctx.putImageData(imageData, 0, 0);
 
-    // Step 2: Unsharp mask (sharpness)
+    // Step 4: Unsharp mask
     if (sharpness > 0) {
       const amount = sharpness / 100;
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = w; tempCanvas.height = h;
-      const tCtx = tempCanvas.getContext('2d');
+      const tmpC = document.createElement('canvas');
+      tmpC.width = w; tmpC.height = h;
+      const tCtx = tmpC.getContext('2d');
       tCtx.filter = 'blur(1px)';
       tCtx.drawImage(canvas, 0, 0);
       const blurred = tCtx.getImageData(0, 0, w, h).data;
       const sharp = ctx.getImageData(0, 0, w, h);
       const sd = sharp.data;
       for (let i = 0; i < sd.length; i += 4) {
-        sd[i]     = clamp(sd[i] + amount * (sd[i] - blurred[i]));
+        if (sd[i+3] === 0) continue;
+        sd[i]   = clamp(sd[i]   + amount * (sd[i]   - blurred[i]));
         sd[i+1] = clamp(sd[i+1] + amount * (sd[i+1] - blurred[i+1]));
         sd[i+2] = clamp(sd[i+2] + amount * (sd[i+2] - blurred[i+2]));
       }
       ctx.putImageData(sharp, 0, 0);
     }
 
-    // Step 3: Background removal + replacement
-    if (removeBg) {
-      imageData = ctx.getImageData(0, 0, w, h);
-      data = imageData.data;
-
-      // Create alpha mask using flood-fill from edges
-      const mask = new Uint8Array(w * h); // 0=bg, 1=product
-      const visited = new Uint8Array(w * h);
-      const queue = [];
-
-      // Seed from all edges
-      for (let x = 0; x < w; x++) {
-        queue.push(x); queue.push(x + (h-1)*w);
-      }
-      for (let y = 0; y < h; y++) {
-        queue.push(y*w); queue.push(y*w + w-1);
-      }
-
-      // Sample background color from corners (average of corner 20x20 blocks)
-      let bgR = 0, bgG = 0, bgB = 0, bgCount = 0;
-      const cornerSize = Math.min(20, Math.floor(w/10), Math.floor(h/10));
-      const corners = [[0,0],[w-cornerSize,0],[0,h-cornerSize],[w-cornerSize,h-cornerSize]];
-      for (const [cx,cy] of corners) {
-        for (let y = cy; y < cy+cornerSize; y++) {
-          for (let x = cx; x < cx+cornerSize; x++) {
-            const idx = (y*w+x)*4;
-            bgR += data[idx]; bgG += data[idx+1]; bgB += data[idx+2]; bgCount++;
-          }
-        }
-      }
-      bgR = bgR/bgCount; bgG = bgG/bgCount; bgB = bgB/bgCount;
-
-      // Adaptive threshold based on background color variance
-      const threshold = 45;
-
-      // BFS flood-fill from edges to find background
-      const isBg = (idx) => {
-        const r = data[idx*4], g = data[idx*4+1], b = data[idx*4+2];
-        const dr = r-bgR, dg = g-bgG, db = b-bgB;
-        return Math.sqrt(dr*dr + dg*dg + db*db) < threshold;
-      };
-
-      for (let i = 0; i < queue.length; i++) {
-        const pos = queue[i];
-        if (pos < 0 || pos >= w*h || visited[pos]) continue;
-        visited[pos] = 1;
-        if (!isBg(pos)) { mask[pos] = 1; continue; }
-        // Mark as background (mask stays 0)
-        const x = pos % w, y = Math.floor(pos / w);
-        if (x > 0) queue.push(pos-1);
-        if (x < w-1) queue.push(pos+1);
-        if (y > 0) queue.push(pos-w);
-        if (y < h-1) queue.push(pos+w);
-      }
-
-      // Mark all unvisited pixels as product
-      for (let i = 0; i < mask.length; i++) {
-        if (!visited[i]) mask[i] = 1;
-      }
-
-      // Smooth mask edges (dilate product mask slightly for clean edges)
-      const smoothMask = new Uint8Array(mask);
-      for (let y = 1; y < h-1; y++) {
-        for (let x = 1; x < w-1; x++) {
-          const idx = y*w+x;
-          if (!mask[idx]) {
-            // Check if any neighbor is product
-            const neighbors = mask[idx-1] + mask[idx+1] + mask[idx-w] + mask[idx+w];
-            if (neighbors >= 3) smoothMask[idx] = 1;
-          }
-        }
-      }
-
-      // Get product bounding box for centering
-      let minX = w, maxX = 0, minY = h, maxY = 0;
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          if (smoothMask[y*w+x]) {
-            minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-            minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-          }
-        }
-      }
-
-      // Create product-only canvas
-      const prodCanvas = document.createElement('canvas');
-      prodCanvas.width = w; prodCanvas.height = h;
-      const prodCtx = prodCanvas.getContext('2d');
-      const prodData = prodCtx.createImageData(w, h);
-      for (let i = 0; i < smoothMask.length; i++) {
-        const si = i * 4;
-        if (smoothMask[i]) {
-          prodData.data[si] = data[si];
-          prodData.data[si+1] = data[si+1];
-          prodData.data[si+2] = data[si+2];
-          prodData.data[si+3] = 255;
-        }
-      }
-      prodCtx.putImageData(prodData, 0, 0);
-
-      // Draw professional background
-      ctx.clearRect(0, 0, w, h);
-      if (bgStyle === 'studio') {
-        const grd = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, w*0.8);
-        grd.addColorStop(0, '#ffffff');
-        grd.addColorStop(0.5, '#f0f0f0');
-        grd.addColorStop(1, '#d8d8d8');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-        // Floor gradient
-        const floor = ctx.createLinearGradient(0, h*0.65, 0, h);
-        floor.addColorStop(0, 'rgba(200,200,200,0)');
-        floor.addColorStop(1, 'rgba(180,180,180,0.3)');
-        ctx.fillStyle = floor;
-        ctx.fillRect(0, h*0.65, w, h*0.35);
-      } else if (bgStyle === 'gradient') {
-        const grd = ctx.createLinearGradient(0, 0, 0, h);
-        grd.addColorStop(0, '#f8f8f8');
-        grd.addColorStop(1, '#e0e0e0');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-      } else if (bgStyle === 'warm') {
-        const grd = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, w*0.8);
-        grd.addColorStop(0, '#fffcf5');
-        grd.addColorStop(0.6, '#fff5e6');
-        grd.addColorStop(1, '#f0e6d3');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-      } else if (bgStyle === 'nature') {
-        const grd = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, w*0.8);
-        grd.addColorStop(0, '#f0f8f0');
-        grd.addColorStop(0.6, '#e8f5e9');
-        grd.addColorStop(1, '#c8e6c9');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-      } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      // Draw shadow under product
-      if (addShadow && maxX > minX) {
-        const prodW = maxX - minX;
-        const prodH = maxY - minY;
-        const shadowX = minX + prodW * 0.1;
-        const shadowY = maxY - prodH * 0.02;
-        const shadowW = prodW * 0.8;
-        const shadowH = prodH * 0.08;
-        const shadowGrd = ctx.createRadialGradient(
-          shadowX + shadowW/2, shadowY + shadowH/2, 0,
-          shadowX + shadowW/2, shadowY + shadowH/2, shadowW/2
-        );
-        shadowGrd.addColorStop(0, 'rgba(0,0,0,0.15)');
-        shadowGrd.addColorStop(0.6, 'rgba(0,0,0,0.06)');
-        shadowGrd.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = shadowGrd;
-        ctx.beginPath();
-        ctx.ellipse(shadowX + shadowW/2, shadowY + shadowH/2, shadowW/2, shadowH, 0, 0, Math.PI*2);
-        ctx.fill();
-      }
-
-      // Draw product on top
-      ctx.drawImage(prodCanvas, 0, 0);
-    }
-
     // Store enhanced blob
     canvas.toBlob(blob => { this.enhancedBlob = blob; }, 'image/jpeg', 0.92);
+  },
+
+  _drawBackground(ctx, w, h, style) {
+    if (style === 'studio') {
+      const grd = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, w*0.8);
+      grd.addColorStop(0, '#ffffff');
+      grd.addColorStop(0.5, '#f0f0f0');
+      grd.addColorStop(1, '#d8d8d8');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+      const floor = ctx.createLinearGradient(0, h*0.65, 0, h);
+      floor.addColorStop(0, 'rgba(200,200,200,0)');
+      floor.addColorStop(1, 'rgba(180,180,180,0.3)');
+      ctx.fillStyle = floor;
+      ctx.fillRect(0, h*0.65, w, h*0.35);
+    } else if (style === 'gradient') {
+      const grd = ctx.createLinearGradient(0, 0, 0, h);
+      grd.addColorStop(0, '#f8f8f8');
+      grd.addColorStop(1, '#e0e0e0');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+    } else if (style === 'warm') {
+      const grd = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, w*0.8);
+      grd.addColorStop(0, '#fffcf5');
+      grd.addColorStop(0.6, '#fff5e6');
+      grd.addColorStop(1, '#f0e6d3');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+    } else if (style === 'nature') {
+      const grd = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, w*0.8);
+      grd.addColorStop(0, '#f0f8f0');
+      grd.addColorStop(0.6, '#e8f5e9');
+      grd.addColorStop(1, '#c8e6c9');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+    }
+  },
+
+  _drawShadow(ctx, w, h) {
+    const cx = w/2, cy = h * 0.92;
+    const sw = w * 0.4, sh = h * 0.03;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, sw);
+    grd.addColorStop(0, 'rgba(0,0,0,0.18)');
+    grd.addColorStop(0.5, 'rgba(0,0,0,0.08)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, sw, sh, 0, 0, Math.PI*2);
+    ctx.fill();
   },
 
   // === OCR ===

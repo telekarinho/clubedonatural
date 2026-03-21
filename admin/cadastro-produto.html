@@ -798,11 +798,8 @@ const App = {
   productData: {},
 
   analysisMode: 'ai',  // 'ai' or 'ocr'
-  geminiKeys: [
-    'AIzaSyCVEHDbKSeJB47OimxEypDlQ-vh7QeLV4M',
-    'AIzaSyBsp-lwVCCCGdOl5AiH7CxseiGVqRQlGEw'
-  ],
-  geminiKey: localStorage.getItem('cdn_gemini_key') || 'AIzaSyCVEHDbKSeJB47OimxEypDlQ-vh7QeLV4M',
+  geminiKeys: [],
+  geminiKey: localStorage.getItem('cdn_gemini_key') || '',
   extraPhotos: [],        // [{type:'traseira', blob:Blob, dataUrl:string}]
   pendingExtraType: null,  // which extra photo type is being captured
   aiQuestions: [],          // questions AI returned
@@ -2180,7 +2177,7 @@ Responda em português brasileiro.`;
       console.error('AI Error:', err);
       progressBar.style.width = '0';
 
-      if (err.message.includes('API_KEY') || err.message.includes('401') || err.message.includes('403')) {
+      if (err.message.includes('API_KEY') || err.message.includes('401') || err.message.includes('403') || err.message.includes('leaked') || err.message.includes('PERMISSION_DENIED')) {
         statusText.textContent = 'Chave inválida. Reconfigure abaixo.';
         localStorage.removeItem('cdn_gemini_key');
         this.geminiKey = '';

@@ -2172,10 +2172,19 @@ Responda em português brasileiro.`;
       const cleanJSON = (str) => {
         // Remove trailing commas before } or ]
         str = str.replace(/,\s*([\]}])/g, '$1');
-        // Fix single quotes to double quotes (but not inside strings)
+        // Fix single quotes to double quotes
         str = str.replace(/'/g, '"');
         // Remove control chars
         str = str.replace(/[\x00-\x1F\x7F]/g, (c) => c === '\n' || c === '\t' ? c : '');
+        // Try to fix unterminated strings — close any open string at end of line
+        str = str.replace(/"([^"]*)\n/g, '"$1"\\n');
+        // Ensure the JSON is properly closed
+        const opens = (str.match(/\{/g) || []).length;
+        const closes = (str.match(/\}/g) || []).length;
+        for (let i = 0; i < opens - closes; i++) str += '}';
+        const openArr = (str.match(/\[/g) || []).length;
+        const closeArr = (str.match(/\]/g) || []).length;
+        for (let i = 0; i < openArr - closeArr; i++) str += ']';
         return str;
       };
       try {
@@ -2241,6 +2250,14 @@ Responda em português brasileiro.`;
         statusText.textContent = 'Cota da IA esgotada. Usando análise inteligente local...';
         setTimeout(() => this.startSmartOCR(), 1500);
         return;
+      } else if (isFollowUp) {
+        // Follow-up failed — chat answers already applied, just go to form
+        statusText.textContent = 'Refinamento parcial. Revise os dados preenchidos.';
+        setTimeout(() => {
+          this.goToStep(3);
+          this.toast('Revise os dados e coloque o preço.');
+        }, 800);
+        return;
       } else {
         statusText.textContent = `Erro: ${err.message}. Usando análise local...`;
         setTimeout(() => this.startSmartOCR(), 1500);
@@ -2254,6 +2271,8 @@ Responda em português brasileiro.`;
     const setField = (id, value) => {
       const el = document.getElementById(id);
       if (!el || !value) return;
+      // Don't overwrite fields already filled by chat or user
+      if (el.value && el.classList.contains('auto-filled')) return;
       el.value = value;
       el.classList.add('auto-filled');
     };

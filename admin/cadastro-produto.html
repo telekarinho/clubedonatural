@@ -102,6 +102,18 @@ input[type=file]{display:none}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--primary-lt);box-shadow:0 0 0 3px rgba(82,183,136,.15)}
 .form-group textarea{resize:vertical;min-height:80px}
 .form-group .auto-filled{border-color:var(--primary-lt);background:var(--primary-bg)}
+.field-help{font-size:11px;color:var(--text-lt);line-height:1.4}
+.smart-panel{background:linear-gradient(135deg,#f8fff9,#eef8f0);border:1px solid #cfe8d5;border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.smart-panel h4{font-size:14px;color:var(--primary);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.smart-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.smart-chip{padding:9px 14px;border:none;border-radius:999px;background:#fff;color:var(--primary);font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.smart-chip:hover{background:var(--primary-bg)}
+.validation-box{display:none;background:#fff8e1;border:1px solid #ffd54f;color:#7a5a00;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px}
+.validation-box.show{display:block}
+.validation-box--error{background:#ffebee;border-color:#ef9a9a;color:#a32020}
+.validation-box ul{margin:8px 0 0 18px}
+.stock-grid-dynamic{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.save-hint{font-size:12px;color:var(--text-lt);margin-top:8px}
 
 /* Tags / Selos */
 .selo-grid{display:flex;flex-wrap:wrap;gap:8px}
@@ -469,6 +481,19 @@ input[type=file]{display:none}
 
   <!-- STEP 3: FORM -->
   <div class="section" id="sec-form">
+    <div class="smart-panel">
+      <h4>✨ Assistente de Cadastro</h4>
+      <p style="font-size:13px;color:var(--text-md)">Use estes atalhos para deixar o cadastro pronto mesmo quando a pessoa nÃ£o souber preencher tudo.</p>
+      <div class="smart-actions">
+        <button class="smart-chip" id="btn-infer-category" type="button">Sugerir categoria</button>
+        <button class="smart-chip" id="btn-generate-barcode" type="button">Gerar cÃ³digo interno</button>
+        <button class="smart-chip" id="btn-suggest-price" type="button">Sugerir preÃ§o</button>
+        <button class="smart-chip" id="btn-fill-sample-stock" type="button">Zerar estoques</button>
+      </div>
+    </div>
+
+    <div class="validation-box" id="validation-box"></div>
+
     <!-- Basic info -->
     <div class="form-card">
       <h3><span>📦</span> Informações Básicas</h3>
@@ -476,6 +501,7 @@ input[type=file]{display:none}
         <div class="form-group">
           <label>Nome do Produto *</label>
           <input type="text" id="f-nome" placeholder="Ex: Sementes de Chia Orgânica">
+          <span class="field-help">Use o nome exato da embalagem. A IA costuma preencher isso automaticamente.</span>
         </div>
       </div>
       <div class="form-row">
@@ -496,6 +522,7 @@ input[type=file]{display:none}
         <div class="form-group">
           <label>Código de barras</label>
           <input type="text" id="f-barcode" placeholder="7891234567890">
+          <span class="field-help">Se não existir código de barras, o sistema gera um código interno.</span>
         </div>
       </div>
       <div class="form-row single">
@@ -521,10 +548,12 @@ input[type=file]{display:none}
         <div class="form-group">
           <label>Custo unitário (R$)</label>
           <input type="number" step="0.01" id="f-custo" placeholder="0.00">
+          <span class="field-help">Se preencher custo e margem, o sistema sugere o preço automaticamente.</span>
         </div>
         <div class="form-group">
           <label>Margem de lucro (%)</label>
           <input type="number" id="f-margem" placeholder="55" value="55">
+          <span class="field-help">Ex.: 55 significa margem alvo de 55%.</span>
         </div>
       </div>
     </div>
@@ -605,20 +634,7 @@ input[type=file]{display:none}
     <!-- Stock -->
     <div class="form-card">
       <h3><span>📦</span> Estoque</h3>
-      <div class="form-row triple">
-        <div class="form-group">
-          <label>Loja Centro</label>
-          <input type="number" id="f-est-centro" value="0">
-        </div>
-        <div class="form-group">
-          <label>Loja Shopping</label>
-          <input type="number" id="f-est-shopping" value="0">
-        </div>
-        <div class="form-group">
-          <label>Loja Norte</label>
-          <input type="number" id="f-est-norte" value="0">
-        </div>
-      </div>
+      <div class="stock-grid-dynamic" id="stock-fields"></div>
       <div class="form-row">
         <div class="form-group">
           <label>Estoque mínimo (alerta)</label>
@@ -653,6 +669,7 @@ input[type=file]{display:none}
       <button class="btn btn--outline" id="btn-back-form">← Editar dados</button>
       <button class="btn btn--success" id="btn-save">✅ Salvar Produto</button>
     </div>
+    <div class="save-hint">O produto será salvo no catálogo global e ativado para a(s) loja(s) escolhida(s), com estoque separado por unidade.</div>
   </div>
 
   <!-- SUCCESS SCREEN -->
@@ -770,8 +787,15 @@ input[type=file]{display:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/core/firebase-config.js"></script>
 <script src="../js/core/firebase-auth.js"></script>
+<script src="../js/core/firestore-service.js"></script>
 <script src="../js/data/stores.js"></script>
-<script>CdnAuth.guard({ requireApproval: true, allowedRoles: ['dono','gerente','estoquista'] });</script>
+<script>CdnAuth.guard({
+  requireApproval: true,
+  allowedRoles: ['dono','gerente','estoquista'],
+  onReady: function(userData) {
+    window._cadastroAuthUser = userData || null;
+  }
+});</script>
 
 <!-- Tesseract.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -805,25 +829,77 @@ const App = {
   aiQuestions: [],          // questions AI returned
   aiAnswers: {},            // user answers to AI questions
   selectedBg: 'white',     // background style for e-commerce photo
+  availableStores: [],
+  isSaving: false,
 
   init() {
     this.bindEvents();
     this.checkApiKey();
     this.initVideo();
     this.loadStores();
+    this.renderStockFields();
+    if (typeof CdnAuth !== 'undefined' && CdnAuth.onReady) {
+      CdnAuth.onReady((userData) => {
+        window._cadastroAuthUser = userData || null;
+        this.loadStores();
+        this.renderStockFields(this.getStockMap());
+      });
+    }
   },
 
   loadStores() {
     const sel = document.getElementById('store-selector');
+    const authUser = window._cadastroAuthUser || null;
     // Load from DataStores (static) + custom stores from localStorage
     const stores = (typeof DataStores !== 'undefined' ? DataStores : []);
     const custom = JSON.parse(localStorage.getItem('cdn_stores_custom') || '[]');
     const deleted = JSON.parse(localStorage.getItem('cdn_stores_deleted') || '[]');
-    const all = [...stores, ...custom].filter(s => !deleted.includes(s.id));
-    sel.innerHTML = '<option value="todas">📍 Todas as lojas</option>';
+    let all = [...stores, ...custom].filter(s => !deleted.includes(s.id));
+    const isNetworkAdmin = authUser && authUser.role === 'dono';
+    if (!isNetworkAdmin && authUser && authUser.storeId) {
+      all = all.filter(store => store.id === authUser.storeId);
+    }
+    this.availableStores = all;
+    sel.innerHTML = isNetworkAdmin ? '<option value="todas">📍 Todas as lojas</option>' : '';
     all.forEach(s => {
       sel.innerHTML += `<option value="${s.id}">🏪 ${s.nome.replace('Clube do Natural - ','')}</option>`;
     });
+    if (!isNetworkAdmin && all[0]) {
+      sel.value = all[0].id;
+      sel.disabled = true;
+    } else {
+      sel.disabled = false;
+    }
+    sel.onchange = () => this.renderStockFields(this.getStockMap());
+  },
+
+  getScopedStoreOptions() {
+    const selectedStore = document.getElementById('store-selector')?.value || 'todas';
+    if (selectedStore === 'todas') return this.availableStores;
+    return this.availableStores.filter(store => store.id === selectedStore);
+  },
+
+  renderStockFields(stock = {}) {
+    const wrap = document.getElementById('stock-fields');
+    if (!wrap) return;
+    const stores = this.getScopedStoreOptions();
+    wrap.innerHTML = stores.map(store => `
+      <div class="form-group">
+        <label>${store.nome.replace('Clube do Natural - ','Loja ')}</label>
+        <input type="number" min="0" step="1" data-stock-store="${store.id}" value="${Number(stock[store.id] || 0)}">
+      </div>
+    `).join('');
+    if (stores.length === 0) {
+      wrap.innerHTML = '<div class="field-help">Nenhuma loja disponível para lançamento de estoque.</div>';
+    }
+  },
+
+  getStockMap() {
+    const stock = {};
+    document.querySelectorAll('[data-stock-store]').forEach(input => {
+      stock[input.dataset.stockStore] = Math.max(0, Number(input.value || 0));
+    });
+    return stock;
   },
 
   // === NAVIGATION ===
@@ -999,6 +1075,14 @@ const App = {
     document.getElementById('btn-back-form').onclick = () => this.goToStep(3);
     document.getElementById('btn-save').onclick = () => this.saveProduct();
     document.getElementById('btn-new').onclick = () => this.reset();
+    document.getElementById('btn-infer-category').onclick = () => this.inferCategoryFromName();
+    document.getElementById('btn-generate-barcode').onclick = () => this.applyGeneratedBarcode();
+    document.getElementById('btn-suggest-price').onclick = () => this.suggestPriceFromCost();
+    document.getElementById('btn-fill-sample-stock').onclick = () => this.fillStockZeros();
+
+    document.getElementById('f-custo').addEventListener('blur', () => this.suggestPriceFromCost(false));
+    document.getElementById('f-margem').addEventListener('blur', () => this.suggestPriceFromCost(false));
+    document.getElementById('f-nome').addEventListener('blur', () => this.inferCategoryFromName(false));
 
     // Selos toggle
     document.querySelectorAll('.selo-chip').forEach(chip => {
@@ -1037,6 +1121,7 @@ const App = {
       const img = new Image();
       img.onload = () => {
         this.originalImage = img;
+        this.showValidation([]);
         document.getElementById('capture-zone').style.display = 'none';
         document.getElementById('preview-area').style.display = '';
 
@@ -2719,16 +2804,114 @@ Responda em português brasileiro.`;
     list.appendChild(row);
   },
 
+  applyGeneratedBarcode() {
+    const barcode = this.generateInternalBarcode();
+    const barcodeEl = document.getElementById('f-barcode');
+    barcodeEl.value = barcode;
+    barcodeEl.classList.add('auto-filled');
+    this.toast(`Código interno gerado: ${barcode}`);
+  },
+
+  suggestPriceFromCost(showToast = true) {
+    const custo = Number(document.getElementById('f-custo').value || 0);
+    const margem = Number(document.getElementById('f-margem').value || 0);
+    if (!(custo > 0) || !(margem > 0 && margem < 95)) return false;
+
+    const suggested = custo / (1 - (margem / 100));
+    let updated = false;
+    document.querySelectorAll('.var-preco').forEach((input) => {
+      if (!Number(input.value || 0)) {
+        input.value = suggested.toFixed(2);
+        input.classList.add('auto-filled');
+        updated = true;
+      }
+    });
+
+    if (showToast && updated) {
+      this.toast(`Preço sugerido com base no custo: R$ ${suggested.toFixed(2).replace('.',',')}`);
+    }
+    return updated;
+  },
+
+  inferCategoryFromName(showToast = true) {
+    const nome = (document.getElementById('f-nome').value || '').toLowerCase();
+    if (!nome) return false;
+    const rules = [
+      { pattern: /(chia|linhaça|quinoa|aveia|granola|semente|grão|cereal)/, category: 'graos' },
+      { pattern: /(whey|creatina|spirulina|suplemento|proteína)/, category: 'suplementos' },
+      { pattern: /(chá|hibisco|camomila|matcha|infusão)/, category: 'chas' },
+      { pattern: /(cúrcuma|gengibre|canela|tempero|pimenta)/, category: 'temperos' },
+      { pattern: /(mel|própolis|geleia real)/, category: 'mel' },
+      { pattern: /(óleo|azeite|coco)/, category: 'oleos' },
+      { pattern: /(castanha|barra|mix|snack)/, category: 'snacks' },
+      { pattern: /(sabonete|shampoo|desodorante)/, category: 'higiene' },
+      { pattern: /(cápsula|coenzima|vitamina|magnésio|colágeno)/, category: 'capsulas' },
+    ];
+    const match = rules.find(rule => rule.pattern.test(nome));
+    if (!match) return false;
+    const select = document.getElementById('f-categoria');
+    select.value = match.category;
+    select.classList.add('auto-filled');
+    if (showToast) this.toast('Categoria sugerida automaticamente.');
+    return true;
+  },
+
+  fillStockZeros() {
+    document.querySelectorAll('[data-stock-store]').forEach(input => { input.value = 0; });
+    this.toast('Estoques definidos como zero.');
+  },
+
+  showValidation(messages, isError = true) {
+    const box = document.getElementById('validation-box');
+    if (!box) return;
+    if (!messages || messages.length === 0) {
+      box.className = 'validation-box';
+      box.innerHTML = '';
+      return;
+    }
+    box.className = `validation-box show${isError ? ' validation-box--error' : ''}`;
+    box.innerHTML = `<strong>${isError ? 'Antes de continuar, ajuste:' : 'Atenção:'}</strong><ul>${messages.map(msg => `<li>${msg}</li>`).join('')}</ul>`;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
+
+  validateProduct(product, { forSave = false } = {}) {
+    const errors = [];
+    const warnings = [];
+
+    if (!this.originalImage) errors.push('Envie ou tire a foto principal do produto.');
+    if (!product.nome) errors.push('Preencha o nome do produto.');
+    if (!product.categoria) errors.push('Defina a categoria do produto.');
+    if (!product.variacoes.length) errors.push('Adicione ao menos uma variação com peso e preço.');
+    if (product.variacoes.some(v => !v.peso)) errors.push('Preencha o peso/quantidade de todas as variações.');
+    if (product.variacoes.some(v => !(Number(v.preco) > 0))) errors.push('Informe um preço maior que zero para todas as variações.');
+    if (!product.fornecedor) warnings.push('Fornecedor não informado.');
+    if (!(product.codigoBarras || '').trim()) warnings.push('Código de barras ausente. O sistema vai gerar um código interno.');
+    if (!Object.keys(product.estoque || {}).length) warnings.push('Nenhum estoque foi informado para as lojas selecionadas.');
+    if (product.custoUnitario > 0 && product.preco > 0 && product.custoUnitario >= product.preco) {
+      warnings.push('O custo está maior ou igual ao preço de venda.');
+    }
+    if (forSave && !product.descricao) warnings.push('Descrição vazia. A IA ou o operador deveria preencher um resumo simples.');
+
+    return { errors, warnings };
+  },
+
   // === PREVIEW ===
   showPreview() {
     const nome = document.getElementById('f-nome').value.trim();
-    if (!nome) { this.toast('Preencha o nome do produto!'); return; }
+    if (!nome) { this.showValidation(['Preencha o nome do produto.']); return; }
 
-    const vars = this.getVariations();
-    if (vars.length === 0 || !vars[0].preco) { this.toast('Adicione pelo menos um preço!'); return; }
+    this.suggestPriceFromCost(false);
+    const product = this.buildProductObject();
+    const validation = this.validateProduct(product);
+    if (validation.errors.length) {
+      this.showValidation(validation.errors);
+      return;
+    }
+    this.showValidation(validation.warnings, false);
 
     const selos = this.getSelectedSelos();
     const imgUrl = this.enhancedBlob ? URL.createObjectURL(this.enhancedBlob) : '';
+    const vars = product.variacoes;
 
     // Build preview card
     const preview = document.getElementById('product-preview');
@@ -2751,7 +2934,6 @@ Responda em português brasileiro.`;
     `;
 
     // Build JSON preview
-    const product = this.buildProductObject();
     document.getElementById('json-preview').textContent = JSON.stringify(product, null, 2);
 
     this.goToStep(4);
@@ -2791,11 +2973,7 @@ Responda em português brasileiro.`;
       },
       curiosidade: document.getElementById('f-curiosidade').value.trim(),
       contraindicacoes: document.getElementById('f-contraindicacoes').value.trim(),
-      estoque: {
-        centro: +document.getElementById('f-est-centro').value || 0,
-        shopping: +document.getElementById('f-est-shopping').value || 0,
-        norte: +document.getElementById('f-est-norte').value || 0
-      },
+      estoque: this.getStockMap(),
       custoUnitario: +document.getElementById('f-custo').value || 0,
       margemLucro: +document.getElementById('f-margem').value || 55,
       codigoBarras: document.getElementById('f-barcode').value.trim(),
@@ -2810,15 +2988,29 @@ Responda em português brasileiro.`;
   },
 
   // === SAVE ===
-  saveProduct() {
+  async saveProduct() {
+    if (this.isSaving) return;
     const product = this.buildProductObject();
     const selectedStore = document.getElementById('store-selector').value;
     product._loja = selectedStore;
+    const validation = this.validateProduct(product, { forSave: true });
+    if (validation.errors.length) {
+      this.goToStep(3);
+      this.showValidation(validation.errors);
+      return;
+    }
 
     // Auto-generate barcode if still empty
     if (!product.codigoBarras) {
       product.codigoBarras = this.generateInternalBarcode();
       document.getElementById('f-barcode').value = product.codigoBarras;
+    }
+
+    this.isSaving = true;
+    const saveBtn = document.getElementById('btn-save');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
     }
 
     // Save to localStorage
@@ -2840,7 +3032,7 @@ Responda em português brasileiro.`;
     }
 
     // Save to Firestore (per store)
-    this.saveToFirestore(product, selectedStore);
+    await this.saveToFirestore(product, selectedStore);
 
     // Update count
     const lojaLabel = selectedStore === 'todas' ? 'todas as lojas' : selectedStore;
@@ -2869,6 +3061,11 @@ Responda em português brasileiro.`;
 
     // Confetti
     this.confetti();
+    this.isSaving = false;
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '✅ Salvar Produto';
+    }
   },
 
   // === FIRESTORE SAVE ===
@@ -2894,22 +3091,28 @@ Responda em português brasileiro.`;
         productDoc.imagem = await base64Promise;
       }
 
-      if (storeId === 'todas') {
-        // Save to global products collection + each store
-        await db.collection('produtos').doc(product.id).set(productDoc, { merge: true });
-        // Also save reference in each store
-        const stores = (typeof DataStores !== 'undefined' ? DataStores : []);
-        const custom = JSON.parse(localStorage.getItem('cdn_stores_custom') || '[]');
-        const deleted = JSON.parse(localStorage.getItem('cdn_stores_deleted') || '[]');
-        const allStores = [...stores, ...custom].filter(s => !deleted.includes(s.id));
-        for (const store of allStores) {
-          await db.collection('lojas').doc(store.id).collection('produtos').doc(product.id).set(productDoc, { merge: true });
-        }
-      } else {
-        // Save to specific store
-        await db.collection('lojas').doc(storeId).collection('produtos').doc(product.id).set(productDoc, { merge: true });
-        // Also save to global
-        await db.collection('produtos').doc(product.id).set(productDoc, { merge: true });
+      await db.collection('produtos').doc(product.id).set(productDoc, { merge: true });
+
+      const targetStores = storeId === 'todas'
+        ? this.availableStores
+        : this.availableStores.filter(store => store.id === storeId);
+
+      for (const store of targetStores) {
+        await db.collection('lojas').doc(store.id).collection('produtos_ativos').doc(product.id).set({
+          ativo: true,
+          productId: product.id,
+          precoLocal: product.preco,
+          nome: product.nome,
+          imagem: productDoc.imagem || product.imagem || '',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        await db.collection('lojas').doc(store.id).collection('estoque').doc(product.id).set({
+          productId: product.id,
+          quantidade: Number(product.estoque?.[store.id] || 0),
+          estoqueMinimo: Number(product.estoqueMinimo || 10),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
       }
 
       console.log(`[Firestore] Product ${product.id} saved to ${storeId}`);
@@ -2917,6 +3120,8 @@ Responda em português brasileiro.`;
       console.error('[Firestore] Save error:', err);
       // Product is still saved locally, so don't block the UX
       this.toast('Salvo localmente. Sincroniza com a nuvem quando possível.');
+    } finally {
+      this.isSaving = false;
     }
   },
 
@@ -2956,9 +3161,6 @@ Responda em português brasileiro.`;
     });
     document.querySelectorAll('.selo-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('f-margem').value = '55';
-    document.getElementById('f-est-centro').value = '0';
-    document.getElementById('f-est-shopping').value = '0';
-    document.getElementById('f-est-norte').value = '0';
     document.getElementById('f-est-minimo').value = '10';
 
     // Reset variations to one empty row
@@ -2986,6 +3188,7 @@ Responda em português brasileiro.`;
     document.querySelectorAll('.extra-photo-btn').forEach(b => b.classList.remove('done'));
     document.getElementById('input-camera').value = '';
     document.getElementById('input-gallery').value = '';
+    this.renderStockFields();
 
     // Reset enhancements
     document.getElementById('ctrl-brightness').value = 0;

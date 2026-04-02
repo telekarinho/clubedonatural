@@ -20,7 +20,7 @@ service cloud.firestore {
     // Global products catalog — public read for catalog pages
     match /produtos/{productId} {
       allow read: if true;
-      allow write: if isAdmin() || isGerente();
+      allow write: if isAdmin() || isGerente() || isEstoquista();
     }
 
     // Global customers — public checkout can create
@@ -170,6 +170,10 @@ service cloud.firestore {
 
     function isApproved() {
       return request.auth != null && getUserData().approved == true;
+    }
+
+    function isEstoquista() {
+      return request.auth != null && getUserData().role == 'estoquista';
     }
 
     function isGerenteOfStore(storeId) {

@@ -1,12 +1,12 @@
 // =============================================
 // Users Admin — Clube do Natural
 // =============================================
-// Manages user approval, roles, and access control via Firebase.
+// Manages user approval, roles, and fine-grained access control via Firebase.
 
 (function () {
   'use strict';
 
-  const ROLES = {
+  const ROLE_CONFIG = {
     dono: { label: 'Dono', color: '#C4972A', icon: '👑' },
     gerente: { label: 'Gerente', color: '#2D6A4F', icon: '🏪' },
     atendente: { label: 'Atendente', color: '#52B788', icon: '🛒' },
@@ -16,13 +16,79 @@
     pendente: { label: 'Pendente', color: '#E63946', icon: '⏳' }
   };
 
+  const MODULES = [
+    { key: 'dashboard', label: 'Dashboard', group: 'Principal' },
+    { key: 'pedidos', label: 'Pedidos', group: 'Operação' },
+    { key: 'assinaturas', label: 'Assinaturas', group: 'Operação' },
+    { key: 'estoque', label: 'Estoque', group: 'Operação' },
+    { key: 'caixa', label: 'Caixa', group: 'Operação' },
+    { key: 'financeiro', label: 'Financeiro', group: 'Gestão' },
+    { key: 'nf', label: 'Notas fiscais', group: 'Gestão' },
+    { key: 'restock', label: 'Pedido de compra', group: 'Operação' },
+    { key: 'produtos', label: 'Produtos', group: 'Gestão' },
+    { key: 'lojas', label: 'Lojas', group: 'Gestão' },
+    { key: 'funcionarios', label: 'Funcionários', group: 'Gestão' },
+    { key: 'clientes', label: 'Clientes', group: 'Relacionamento' },
+    { key: 'relatorios', label: 'Relatórios', group: 'Gestão' },
+    { key: 'config', label: 'Configurações', group: 'Sistema' },
+    { key: 'usuarios', label: 'Usuários', group: 'Sistema' },
+    { key: 'metas', label: 'Metas & Pontos', group: 'Performance' },
+    { key: 'afiliados', label: 'Afiliados', group: 'Performance' }
+  ];
+
+  const ROLE_PRESETS = {
+    dono: MODULES.map(item => item.key),
+    gerente: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'financeiro', 'nf', 'restock', 'metas', 'afiliados', 'produtos', 'clientes', 'relatorios'],
+    atendente: ['pedidos', 'assinaturas', 'metas', 'afiliados'],
+    caixa: ['pedidos', 'caixa', 'financeiro', 'nf', 'metas'],
+    estoquista: ['estoque', 'restock', 'produtos', 'metas'],
+    motoboy: ['pedidos'],
+    pendente: []
+  };
+
+  function uniqPermissions(list) {
+    return [...new Set((Array.isArray(list) ? list : []).filter(Boolean))];
+  }
+
+  function getRoleMeta(role) {
+    return ROLE_CONFIG[role] || ROLE_CONFIG.pendente;
+  }
+
+  function getPresetPermissions(role) {
+    return uniqPermissions(ROLE_PRESETS[role] || []);
+  }
+
+  function getUserPermissions(user) {
+    return uniqPermissions(user.permissions && user.permissions.length ? user.permissions : getPresetPermissions(user.role));
+  }
+
+  function formatDate(value, withTime) {
+    if (!value) return 'N/A';
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return withTime ? date.toLocaleString('pt-BR') : date.toLocaleDateString('pt-BR');
+  }
+
+  function initials(user) {
+    const source = user.displayName || user.email || '?';
+    return source[0].toUpperCase();
+  }
+
+  function groupModules() {
+    const grouped = {};
+    MODULES.forEach(module => {
+      if (!grouped[module.group]) grouped[module.group] = [];
+      grouped[module.group].push(module);
+    });
+    return grouped;
+  }
+
   window.UsersAdmin = {
     users: [],
     loaded: false,
 
     async init() {
       if (!CdnFirebase.ready) return;
-      // Only dono can see users page
       if (CdnAuth.userData?.role !== 'dono') {
         document.getElementById('usuarios-content').innerHTML =
           '<p style="color:#E63946;padding:20px">Apenas o Dono pode gerenciar usuários.</p>';
@@ -50,7 +116,7 @@
       } catch (err) {
         console.error('[UsersAdmin] Error loading users:', err);
         document.getElementById('approved-users-list').innerHTML =
-          '<p style="color:#E63946">Erro ao carregar usuários: ' + err.message + '</p>';
+          `<p style="color:#E63946">Erro ao carregar usuários: ${err.message}</p>`;
       }
     },
 
@@ -58,9 +124,9 @@
       const pending = this.users.filter(u => !u.approved);
       const approved = this.users.filter(u => u.approved);
 
-      // Pending users section
       const pendingSection = document.getElementById('pending-users-section');
       const pendingList = document.getElementById('pending-users-list');
+      const approvedList = document.getElementById('approved-users-list');
 
       if (pending.length > 0) {
         pendingSection.style.display = 'block';
@@ -69,33 +135,38 @@
         pendingSection.style.display = 'none';
       }
 
-      // Approved users
-      const approvedList = document.getElementById('approved-users-list');
-      if (approved.length > 0) {
-        approvedList.innerHTML = approved.map(u => this.renderUserCard(u, false)).join('');
-      } else {
-        approvedList.innerHTML = '<p style="color:#888;padding:20px">Nenhum usuário aprovado ainda.</p>';
-      }
+      approvedList.innerHTML = approved.length
+        ? approved.map(u => this.renderUserCard(u, false)).join('')
+        : '<p style="color:#888;padding:20px">Nenhum usuário aprovado ainda.</p>';
+
+      this.bindCardEvents();
     },
 
     renderUserCard(user, isPending) {
-      const role = ROLES[user.role] || ROLES.pendente;
-      const createdAt = user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString('pt-BR') : 'N/A';
-      const lastLogin = user.lastLogin?.toDate ? user.lastLogin.toDate().toLocaleString('pt-BR') : 'N/A';
+      const role = getRoleMeta(user.role);
+      const createdAt = formatDate(user.createdAt, false);
+      const lastLogin = formatDate(user.lastLogin, true);
       const isCurrentUser = user.uid === CdnAuth.currentUser?.uid;
+      const permissions = getUserPermissions(user);
+      const presetPermissions = getPresetPermissions(user.role);
+      const groupedModules = groupModules();
+      const summary = permissions.length
+        ? permissions.map(key => MODULES.find(item => item.key === key)?.label || key).slice(0, 4).join(', ')
+        : 'Sem acesso liberado';
 
       return `
         <div class="user-card ${isPending ? 'user-card--pending' : ''}" data-uid="${user.uid}">
           <div class="user-card__header">
             ${user.photoURL
               ? `<img src="${user.photoURL}" alt="" class="user-card__avatar">`
-              : `<div class="user-card__avatar user-card__avatar--placeholder">${(user.displayName || user.email || '?')[0].toUpperCase()}</div>`
+              : `<div class="user-card__avatar user-card__avatar--placeholder">${initials(user)}</div>`
             }
             <div class="user-card__info">
               <strong class="user-card__name">${user.displayName || 'Sem nome'} ${isCurrentUser ? '<span style="font-size:11px;color:#888">(você)</span>' : ''}</strong>
               <span class="user-card__email">${user.email}</span>
             </div>
           </div>
+
           <div class="user-card__meta">
             <span class="user-card__role" style="background:${role.color}15;color:${role.color};border:1px solid ${role.color}30">
               ${role.icon} ${role.label}
@@ -103,33 +174,100 @@
             <span class="user-card__date">Criado: ${createdAt}</span>
             <span class="user-card__date">Último acesso: ${lastLogin}</span>
           </div>
-          <div class="user-card__actions">
-            ${isPending ? `
-              <button class="btn btn--sm btn--primary" onclick="UsersAdmin.approveUser('${user.uid}')">✅ Aprovar</button>
-              <button class="btn btn--sm btn--danger" onclick="UsersAdmin.rejectUser('${user.uid}')">❌ Rejeitar</button>
-            ` : `
-              <select class="user-card__role-select" onchange="UsersAdmin.changeRole('${user.uid}', this.value)" ${isCurrentUser ? 'disabled' : ''}>
-                ${Object.entries(ROLES).filter(([k]) => k !== 'pendente').map(([k, v]) =>
-                  `<option value="${k}" ${user.role === k ? 'selected' : ''}>${v.icon} ${v.label}</option>`
+
+          ${isPending ? `
+            <div class="user-card__actions">
+              <label style="display:block;width:100%;font-size:12px;font-weight:700;color:#475569;">Cargo inicial</label>
+              <select class="user-card__role-select" data-role-select="${user.uid}">
+                ${Object.entries(ROLE_CONFIG).filter(([key]) => key !== 'pendente').map(([key, value]) =>
+                  `<option value="${key}" ${key === 'atendente' ? 'selected' : ''}>${value.icon} ${value.label}</option>`
                 ).join('')}
               </select>
-              ${!isCurrentUser ? `<button class="btn btn--sm btn--danger-ghost" onclick="UsersAdmin.revokeUser('${user.uid}')">Revogar</button>` : ''}
-            `}
-          </div>
+              <button class="btn btn--sm btn--primary" data-approve-user="${user.uid}">✅ Aprovar</button>
+              <button class="btn btn--sm btn--danger" data-reject-user="${user.uid}">❌ Rejeitar</button>
+            </div>
+          ` : `
+            <div style="padding:12px 14px;border:1px solid #E5E7EB;border-radius:12px;background:#FAFAFA;margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+                <div>
+                  <div style="font-size:12px;color:#64748B;text-transform:uppercase;font-weight:700;">Perfil de acesso</div>
+                  <div style="font-size:13px;color:#334155;margin-top:4px;">${summary}</div>
+                </div>
+                <span style="font-size:12px;color:${permissions.length === presetPermissions.length && permissions.every(p => presetPermissions.includes(p)) ? '#166534' : '#9A3412'};font-weight:700;">
+                  ${permissions.length === presetPermissions.length && permissions.every(p => presetPermissions.includes(p)) ? 'Preset do cargo' : 'Personalizado'}
+                </span>
+              </div>
+            </div>
+
+            <div class="user-card__actions" style="margin-bottom:12px;">
+              <select class="user-card__role-select" data-change-role="${user.uid}" ${isCurrentUser ? 'disabled' : ''}>
+                ${Object.entries(ROLE_CONFIG).filter(([key]) => key !== 'pendente').map(([key, value]) =>
+                  `<option value="${key}" ${user.role === key ? 'selected' : ''}>${value.icon} ${value.label}</option>`
+                ).join('')}
+              </select>
+              <button class="btn btn--sm btn--ghost" data-apply-preset="${user.uid}" ${isCurrentUser ? 'disabled' : ''}>Aplicar padrão do cargo</button>
+              ${!isCurrentUser ? `<button class="btn btn--sm btn--danger-ghost" data-revoke-user="${user.uid}">Revogar</button>` : ''}
+            </div>
+
+            <details class="user-card__permissions">
+              <summary style="cursor:pointer;font-weight:700;color:#1B4332;">Controlar o que esta pessoa pode acessar</summary>
+              <div style="margin-top:12px;display:grid;gap:12px;">
+                ${Object.entries(groupedModules).map(([group, items]) => `
+                  <div style="border:1px solid #E5E7EB;border-radius:12px;padding:12px;">
+                    <div style="font-size:12px;text-transform:uppercase;font-weight:800;color:#64748B;margin-bottom:8px;">${group}</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
+                      ${items.map(module => `
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:8px 10px;">
+                          <input type="checkbox" data-permission-toggle="${user.uid}" value="${module.key}" ${permissions.includes(module.key) ? 'checked' : ''} ${isCurrentUser && module.key === 'usuarios' ? 'disabled' : ''}>
+                          <span>${module.label}</span>
+                        </label>
+                      `).join('')}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </details>
+          `}
         </div>
       `;
     },
 
+    bindCardEvents() {
+      document.querySelectorAll('[data-approve-user]').forEach(button => {
+        button.addEventListener('click', () => this.approveUser(button.dataset.approveUser));
+      });
+      document.querySelectorAll('[data-reject-user]').forEach(button => {
+        button.addEventListener('click', () => this.rejectUser(button.dataset.rejectUser));
+      });
+      document.querySelectorAll('[data-change-role]').forEach(select => {
+        select.addEventListener('change', () => this.changeRole(select.dataset.changeRole, select.value));
+      });
+      document.querySelectorAll('[data-apply-preset]').forEach(button => {
+        button.addEventListener('click', () => this.applyRolePreset(button.dataset.applyPreset));
+      });
+      document.querySelectorAll('[data-revoke-user]').forEach(button => {
+        button.addEventListener('click', () => this.revokeUser(button.dataset.revokeUser));
+      });
+      document.querySelectorAll('[data-permission-toggle]').forEach(input => {
+        input.addEventListener('change', () => this.savePermissionSelection(input.dataset.permissionToggle));
+      });
+    },
+
     async approveUser(uid) {
-      if (!confirm('Aprovar este usuário?')) return;
+      const roleSelect = document.querySelector(`[data-role-select="${uid}"]`);
+      const role = roleSelect ? roleSelect.value : 'atendente';
+      const permissions = getPresetPermissions(role);
+
+      if (!confirm(`Aprovar este usuário como ${getRoleMeta(role).label}?`)) return;
       try {
         await CdnFirebase.db.collection('users').doc(uid).update({
           approved: true,
-          role: 'atendente', // default role for new approved users
+          role,
+          permissions,
           approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
           approvedBy: CdnAuth.currentUser.uid
         });
-        this.toast('Usuário aprovado!');
+        this.toast(`Usuário aprovado como ${getRoleMeta(role).label}`);
         await this.refresh();
       } catch (err) {
         this.toast('Erro: ' + err.message, 'error');
@@ -148,23 +286,67 @@
     },
 
     async changeRole(uid, newRole) {
+      const user = this.users.find(item => item.uid === uid);
+      if (!user) return;
+      if (user.uid === CdnAuth.currentUser?.uid && newRole !== user.role) {
+        this.toast('Não altere o próprio cargo por aqui.', 'error');
+        this.render();
+        return;
+      }
+
       try {
         await CdnFirebase.db.collection('users').doc(uid).update({ role: newRole });
-        const user = this.users.find(u => u.uid === uid);
-        if (user) user.role = newRole;
-        this.toast(`Cargo alterado para ${ROLES[newRole]?.label || newRole}`);
+        user.role = newRole;
+        this.toast(`Cargo alterado para ${getRoleMeta(newRole).label}`);
+        await this.refresh();
       } catch (err) {
         this.toast('Erro: ' + err.message, 'error');
-        this.render(); // revert UI
+        this.render();
+      }
+    },
+
+    async applyRolePreset(uid) {
+      const user = this.users.find(item => item.uid === uid);
+      if (!user) return;
+      const permissions = getPresetPermissions(user.role);
+      try {
+        await CdnFirebase.db.collection('users').doc(uid).update({ permissions });
+        this.toast(`Acesso padrão de ${getRoleMeta(user.role).label} aplicado.`);
+        await this.refresh();
+      } catch (err) {
+        this.toast('Erro: ' + err.message, 'error');
+      }
+    },
+
+    async savePermissionSelection(uid) {
+      const inputs = Array.from(document.querySelectorAll(`[data-permission-toggle="${uid}"]`));
+      const permissions = uniqPermissions(inputs.filter(input => input.checked).map(input => input.value));
+      const user = this.users.find(item => item.uid === uid);
+      if (!user) return;
+      if (user.uid === CdnAuth.currentUser?.uid && !permissions.includes('usuarios')) {
+        this.toast('Seu próprio acesso a usuários não pode ser removido aqui.', 'error');
+        await this.refresh();
+        return;
+      }
+
+      try {
+        await CdnFirebase.db.collection('users').doc(uid).update({ permissions });
+        this.toast('Permissões atualizadas.');
+        const target = this.users.find(item => item.uid === uid);
+        if (target) target.permissions = permissions;
+        await this.refresh();
+      } catch (err) {
+        this.toast('Erro: ' + err.message, 'error');
       }
     },
 
     async revokeUser(uid) {
-      if (!confirm('Revogar acesso deste usuário? Ele voltará a status pendente.')) return;
+      if (!confirm('Revogar acesso deste usuário? Ele voltará para pendente.')) return;
       try {
         await CdnFirebase.db.collection('users').doc(uid).update({
           approved: false,
-          role: 'pendente'
+          role: 'pendente',
+          permissions: []
         });
         this.toast('Acesso revogado.');
         await this.refresh();
@@ -190,4 +372,6 @@
       }
     }
   };
+
+  window.CdnPermissionPresets = ROLE_PRESETS;
 })();

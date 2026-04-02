@@ -386,11 +386,16 @@
         estoquista: ['estoque','restock','produtos','metas'],
         motoboy: ['pedidos']
       };
+      var resolvedPermissions = Array.isArray(userData.permissions) && userData.permissions.length
+        ? userData.permissions
+        : (window.CdnPermissionPresets && window.CdnPermissionPresets[userData.role]
+          ? window.CdnPermissionPresets[userData.role]
+          : (PERMISSIONS[userData.role] || []));
       var adminUser = {
         id: userData.uid || CdnAuth.currentUser.uid,
         nome: userData.displayName || CdnAuth.currentUser.displayName || CdnAuth.currentUser.email,
         cargo: userData.role || 'pendente',
-        permissions: PERMISSIONS[userData.role] || [],
+        permissions: resolvedPermissions,
         storeId: userData.storeId || null,
         email: CdnAuth.currentUser.email,
         photoURL: CdnAuth.currentUser.photoURL

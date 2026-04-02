@@ -11,6 +11,7 @@ const AdminApp = (() => {
     assinaturas: 'Assinaturas',
     estoque: 'Estoque',
     caixa: 'Caixa',
+    financeiro: 'Financeiro',
     nf: 'Notas Fiscais',
     produtos: 'Produtos',
     lojas: 'Lojas',
@@ -19,6 +20,9 @@ const AdminApp = (() => {
     relatorios: 'Relatórios',
     config: 'Configurações',
     usuarios: 'Usuários',
+    restock: 'Pedido de Compra',
+    metas: 'Metas & Pontos',
+    afiliados: 'Afiliados',
   };
 
   // DOM references (populated on init)
@@ -178,44 +182,69 @@ const AdminApp = (() => {
     triggerPageRender(page);
   }
 
-  function triggerPageRender(page) {
+  async function triggerPageRender(page) {
     const selectedStore = els.storeSelector.value;
+
+    // Gerente scoping: force store filter to their assigned store
+    const user = AppState.get('user');
+    const effectiveStore = (user && user.cargo === 'gerente' && AppState.get('userStoreId'))
+      ? AppState.get('userStoreId')
+      : selectedStore;
+
+    // Update store selector for gerente
+    if (user && user.cargo === 'gerente' && AppState.get('userStoreId')) {
+      els.storeSelector.value = AppState.get('userStoreId');
+      els.storeSelector.disabled = true;
+    }
+
     switch (page) {
       case 'dashboard':
-        if (typeof AdminDashboard !== 'undefined') AdminDashboard.render(selectedStore);
+        if (typeof AdminDashboard !== 'undefined') AdminDashboard.render(effectiveStore);
         break;
       case 'pedidos':
-        if (typeof AdminPedidos !== 'undefined') AdminPedidos.render(selectedStore);
+        if (typeof AdminPedidos !== 'undefined') await AdminPedidos.render(effectiveStore);
         break;
       case 'assinaturas':
-        if (typeof AdminAssinaturas !== 'undefined') AdminAssinaturas.render(selectedStore);
+        if (typeof AdminAssinaturas !== 'undefined') AdminAssinaturas.render(effectiveStore);
         break;
       case 'estoque':
-        if (typeof AdminEstoque !== 'undefined') AdminEstoque.render(selectedStore);
+        if (typeof AdminEstoque !== 'undefined') await AdminEstoque.render(effectiveStore);
         break;
       case 'caixa':
-        if (typeof AdminCaixa !== 'undefined') AdminCaixa.render(selectedStore);
+        if (typeof AdminCaixa !== 'undefined') AdminCaixa.render(effectiveStore);
+        break;
+      case 'financeiro':
+        if (typeof AdminFinanceiro !== 'undefined') await AdminFinanceiro.render(effectiveStore);
         break;
       case 'nf':
-        if (typeof AdminNF !== 'undefined') AdminNF.render(selectedStore);
+        if (typeof AdminNF !== 'undefined') AdminNF.render(effectiveStore);
         break;
       case 'produtos':
-        if (typeof AdminProdutos !== 'undefined') AdminProdutos.render(selectedStore);
+        if (typeof AdminProdutos !== 'undefined') await AdminProdutos.render(effectiveStore);
         break;
       case 'lojas':
-        if (typeof AdminLojas !== 'undefined') AdminLojas.render(selectedStore);
+        if (typeof AdminLojas !== 'undefined') await AdminLojas.render(effectiveStore);
         break;
       case 'funcionarios':
-        if (typeof AdminFuncionarios !== 'undefined') AdminFuncionarios.render(selectedStore);
+        if (typeof AdminFuncionarios !== 'undefined') await AdminFuncionarios.render(effectiveStore);
         break;
       case 'clientes':
-        if (typeof AdminClientes !== 'undefined') AdminClientes.render(selectedStore);
+        if (typeof AdminClientes !== 'undefined') AdminClientes.render(effectiveStore);
         break;
       case 'relatorios':
-        if (typeof AdminRelatorios !== 'undefined') AdminRelatorios.render(selectedStore);
+        if (typeof AdminRelatorios !== 'undefined') AdminRelatorios.render(effectiveStore);
+        break;
+      case 'restock':
+        if (typeof AdminRestock !== 'undefined') await AdminRestock.render(effectiveStore);
+        break;
+      case 'metas':
+        if (typeof AdminMetas !== 'undefined') AdminMetas.render(effectiveStore);
+        break;
+      case 'afiliados':
+        if (typeof AdminAfiliados !== 'undefined') AdminAfiliados.render(effectiveStore);
         break;
       case 'config':
-        // Config page — placeholder for now
+        renderConfigPage();
         break;
       case 'usuarios':
         if (typeof UsersAdmin !== 'undefined') UsersAdmin.init();
@@ -368,11 +397,126 @@ const AdminApp = (() => {
   /* ------------------------------------------
      PUBLIC API
   ------------------------------------------ */
+  /* ------------------------------------------
+     CONFIG PAGE
+  ------------------------------------------ */
+  function getSettings() {
+    try { return JSON.parse(localStorage.getItem('cdn_settings') || '{}'); } catch(e) { return {}; }
+  }
+  function saveSettings(s) {
+    localStorage.setItem('cdn_settings', JSON.stringify(s));
+    // Also save to Firestore for sync across devices
+    if (typeof FirestoreService !== 'undefined' && FirestoreService.ready) {
+      try { CdnFirebase.db.collection('meta').doc('settings').set(s, { merge: true }); } catch(e) {}
+    }
+  }
+
+  function renderConfigPage() {
+    const el = document.getElementById('config-content');
+    if (!el) return;
+    const s = getSettings();
+
+    el.innerHTML = `
+      <div style="max-width:700px;">
+        <h2 style="color:#1B4332;margin-bottom:24px;">⚙️ Configurações do Sistema</h2>
+
+        <!-- Assinaturas -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <h3 style="margin:0 0 16px;font-size:16px;color:#1B4332;">🔄 Assinaturas Recorrentes</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">Desconto da Assinatura (%)</label>
+              <input type="number" id="cfg-sub-discount" min="0" max="50" step="1" value="${s.subscriptionDiscount || 15}"
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;">
+              <span style="font-size:11px;color:#999;">Desconto aplicado em vendas por assinatura no PDV e catálogo</span>
+            </div>
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">Frequências Disponíveis</label>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                  <input type="checkbox" id="cfg-freq-semanal" ${(s.frequencies || ['semanal','quinzenal','mensal']).includes('semanal') ? 'checked' : ''}> Semanal
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                  <input type="checkbox" id="cfg-freq-quinzenal" ${(s.frequencies || ['semanal','quinzenal','mensal']).includes('quinzenal') ? 'checked' : ''}> Quinzenal
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                  <input type="checkbox" id="cfg-freq-mensal" ${(s.frequencies || ['semanal','quinzenal','mensal']).includes('mensal') ? 'checked' : ''}> Mensal
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gamificação -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <h3 style="margin:0 0 16px;font-size:16px;color:#1B4332;">🎯 Gamificação & Metas</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">Pontos por Assinatura Fechada</label>
+              <input type="number" id="cfg-pts-assinatura" min="0" max="100" step="1" value="${s.pointsPerSubscription || 20}"
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">Pontos por Venda Finalizada</label>
+              <input type="number" id="cfg-pts-venda" min="0" max="50" step="1" value="${s.pointsPerSale || 5}"
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Loja -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <h3 style="margin:0 0 16px;font-size:16px;color:#1B4332;">🏪 Loja & Geral</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">Frete Grátis a partir de (R$)</label>
+              <input type="number" id="cfg-free-shipping" min="0" step="1" value="${s.freeShippingMin || 89}"
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">WhatsApp da Loja</label>
+              <input type="tel" id="cfg-whatsapp" value="${s.whatsapp || '5511999990000'}" placeholder="5511999990000"
+                style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;">
+            </div>
+          </div>
+        </div>
+
+        <button onclick="saveConfigPage()" class="btn btn--primary" style="padding:12px 32px;font-size:15px;">
+          💾 Salvar Configurações
+        </button>
+        <span id="cfg-saved-msg" style="display:none;margin-left:12px;color:#10B981;font-weight:600;font-size:14px;">✅ Salvo!</span>
+      </div>
+    `;
+  }
+
+  // Exposed globally for onclick
+  window.saveConfigPage = function() {
+    const freqs = [];
+    if (document.getElementById('cfg-freq-semanal').checked) freqs.push('semanal');
+    if (document.getElementById('cfg-freq-quinzenal').checked) freqs.push('quinzenal');
+    if (document.getElementById('cfg-freq-mensal').checked) freqs.push('mensal');
+
+    const settings = {
+      subscriptionDiscount: parseInt(document.getElementById('cfg-sub-discount').value) || 15,
+      frequencies: freqs,
+      pointsPerSubscription: parseInt(document.getElementById('cfg-pts-assinatura').value) || 20,
+      pointsPerSale: parseInt(document.getElementById('cfg-pts-venda').value) || 5,
+      freeShippingMin: parseInt(document.getElementById('cfg-free-shipping').value) || 89,
+      whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+    saveSettings(settings);
+    const msg = document.getElementById('cfg-saved-msg');
+    if (msg) { msg.style.display = 'inline'; setTimeout(() => msg.style.display = 'none', 3000); }
+    if (typeof Toast !== 'undefined') Toast.success('Configurações salvas!');
+  };
+
   return {
     init,
     navigateTo,
     updatePedidosBadge,
     updateSyncBanner,
+    getSettings,
     getSelectedStore() {
       return els.storeSelector ? els.storeSelector.value : 'todas';
     },

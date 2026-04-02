@@ -7,144 +7,6 @@ const AdminDashboard = (() => {
   const container = () => document.getElementById('dashboard-content');
 
   /* ------------------------------------------
-     MOCK DATA SEEDER
-     Generates realistic orders & subscriptions
-     if none exist in localStorage
-  ------------------------------------------ */
-  function ensureMockData() {
-    // Orders
-    let orders = Storage.get('orders');
-    if (!orders || orders.length === 0) {
-      orders = generateMockOrders();
-      Storage.set('orders', orders);
-    }
-
-    // Subscriptions
-    let subs = Storage.get('subscriptions');
-    if (!subs || subs.length === 0) {
-      subs = generateMockSubscriptions();
-      Storage.set('subscriptions', subs);
-    }
-  }
-
-  function generateMockOrders() {
-    const stores = ['centro', 'shopping', 'norte', 'sul', 'praia'];
-    const statuses = ['pendente', 'preparando', 'pronto', 'entregue', 'entregue', 'entregue'];
-    const pagamentos = ['pix', 'credito', 'debito', 'dinheiro'];
-    const nomes = [
-      'Fernanda Lima', 'João Mendes', 'Camila Torres', 'Rafael Costa',
-      'Beatriz Oliveira', 'Marcelo Santos', 'Larissa Rocha', 'André Ferreira',
-      'Patrícia Alves', 'Bruno Cardoso', 'Julia Nascimento', 'Diego Souza',
-      'Carolina Martins', 'Thiago Barbosa', 'Amanda Pereira', 'Lucas Ribeiro',
-    ];
-
-    const orders = [];
-    const now = new Date();
-
-    for (let i = 0; i < 45; i++) {
-      const daysAgo = Math.floor(Math.random() * 8);
-      const date = new Date(now);
-      date.setDate(date.getDate() - daysAgo);
-      date.setHours(Math.floor(Math.random() * 12) + 8, Math.floor(Math.random() * 60));
-
-      // Pick 1-4 random products
-      const numItems = Math.floor(Math.random() * 4) + 1;
-      const items = [];
-      const usedProducts = new Set();
-
-      for (let j = 0; j < numItems; j++) {
-        let product;
-        do {
-          product = DataProducts[Math.floor(Math.random() * DataProducts.length)];
-        } while (usedProducts.has(product.id));
-        usedProducts.add(product.id);
-
-        const variacao = product.variacoes[Math.floor(Math.random() * product.variacoes.length)];
-        const qty = Math.floor(Math.random() * 3) + 1;
-        items.push({
-          productId: product.id,
-          nome: product.nome,
-          peso: variacao.peso,
-          preco: variacao.preco,
-          quantidade: qty,
-        });
-      }
-
-      const subtotal = items.reduce((s, it) => s + it.preco * it.quantidade, 0);
-      const taxaEntrega = Math.random() > 0.5 ? 0 : [5.99, 9.99][Math.floor(Math.random() * 2)];
-
-      orders.push({
-        id: `ped-${Utils.generateId()}`,
-        numero: Utils.generateOrderNumber(),
-        data: date.toISOString(),
-        cliente: {
-          nome: nomes[Math.floor(Math.random() * nomes.length)],
-          celular: `(11) 9${Math.floor(Math.random() * 9000 + 1000)}-${Math.floor(Math.random() * 9000 + 1000)}`,
-        },
-        loja: stores[Math.floor(Math.random() * stores.length)],
-        items,
-        subtotal,
-        taxaEntrega,
-        total: subtotal + taxaEntrega,
-        pagamento: pagamentos[Math.floor(Math.random() * pagamentos.length)],
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        entrega: Math.random() > 0.4 ? 'retirada' : 'delivery',
-      });
-    }
-
-    // Sort by date descending
-    orders.sort((a, b) => new Date(b.data) - new Date(a.data));
-    return orders;
-  }
-
-  function generateMockSubscriptions() {
-    const nomes = [
-      'Fernanda Lima', 'João Mendes', 'Camila Torres', 'Rafael Costa',
-      'Beatriz Oliveira', 'Marcelo Santos', 'Larissa Rocha', 'André Ferreira',
-    ];
-    const frequencies = [15, 30, 30, 30, 45, 60];
-    const subs = [];
-
-    for (let i = 0; i < 12; i++) {
-      const product = DataProducts[Math.floor(Math.random() * Math.min(20, DataProducts.length))];
-      if (!product.recorrencia) continue;
-
-      const variacao = product.variacoes[Math.floor(Math.random() * product.variacoes.length)];
-      const freq = frequencies[Math.floor(Math.random() * frequencies.length)];
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - Math.floor(Math.random() * 90));
-
-      const nextDelivery = new Date(startDate);
-      while (nextDelivery < new Date()) {
-        nextDelivery.setDate(nextDelivery.getDate() + freq);
-      }
-
-      subs.push({
-        id: `sub-${Utils.generateId()}`,
-        cliente: {
-          nome: nomes[Math.floor(Math.random() * nomes.length)],
-          celular: `(11) 9${Math.floor(Math.random() * 9000 + 1000)}-${Math.floor(Math.random() * 9000 + 1000)}`,
-        },
-        produto: {
-          id: product.id,
-          nome: product.nome,
-          peso: variacao.peso,
-          preco: variacao.preco,
-        },
-        desconto: product.recorrencia.descontoPercent,
-        precoFinal: variacao.preco * (1 - product.recorrencia.descontoPercent / 100),
-        frequenciaDias: freq,
-        dataInicio: startDate.toISOString(),
-        proximaEntrega: nextDelivery.toISOString(),
-        loja: ['centro', 'shopping', 'norte', 'sul'][Math.floor(Math.random() * 4)],
-        status: Math.random() > 0.15 ? 'ativa' : 'pausada',
-      });
-    }
-
-    return subs;
-  }
-
-  /* ------------------------------------------
      DATA HELPERS
   ------------------------------------------ */
   function getOrders(storeFilter) {
@@ -212,8 +74,51 @@ const AdminDashboard = (() => {
     }, 0);
 
     const assinaturasAtivas = activeSubs.length;
+    const finance = getFinanceKPIs(storeFilter, orders);
 
-    return { vendasHoje, pedidosHoje, ticketMedio, estoqueBaixo, mrr, assinaturasAtivas };
+    return {
+      vendasHoje,
+      pedidosHoje,
+      ticketMedio,
+      estoqueBaixo,
+      mrr,
+      assinaturasAtivas,
+      vendaMinimaDiaria: finance.vendaMinimaDiaria,
+      scoreFinanceiro: finance.score,
+    };
+  }
+
+  function getFinanceKPIs(storeFilter, orders) {
+    if (typeof FinanceEngine === 'undefined') {
+      return { vendaMinimaDiaria: 0, score: 0 };
+    }
+
+    const periodKey = FinanceEngine.getCurrentPeriodKey();
+    const fixedCosts = (Storage.get('finance_fixed_costs') || []).filter(entry => entry.periodKey === periodKey);
+    const variableCosts = (Storage.get('finance_variable_costs') || []).filter(entry => entry.periodKey === periodKey);
+    const caixaData = Storage.get('caixa') || {};
+    const caixaSessions = [];
+
+    Object.entries(caixaData).forEach(([storeId, days]) => {
+      Object.entries(days || {}).forEach(([dateKey, session]) => {
+        caixaSessions.push({ ...session, loja: storeId, dateKey });
+      });
+    });
+
+    const metrics = FinanceEngine.computeMetrics({
+      storeId: storeFilter,
+      periodKey,
+      orders,
+      products: typeof DataProducts !== 'undefined' ? DataProducts : [],
+      caixaSessions,
+      fixedCosts,
+      variableCosts,
+    });
+
+    return {
+      vendaMinimaDiaria: metrics.vendaMinimaDiaria,
+      score: metrics.score,
+    };
   }
 
   /* ------------------------------------------
@@ -330,11 +235,24 @@ const AdminDashboard = (() => {
   /* ------------------------------------------
      RENDER
   ------------------------------------------ */
-  function render(storeFilter) {
+  async function render(storeFilter) {
     const el = container();
     if (!el) return;
 
-    ensureMockData();
+    // Load from Firestore first, fallback to localStorage
+    if (typeof FirestoreService !== 'undefined') {
+      try {
+        FirestoreService.init();
+        const fsOrders = await FirestoreService.Orders.getAll();
+        if (fsOrders && fsOrders.length > 0) {
+          Storage.set('orders', fsOrders);
+        }
+        const fsSubs = await FirestoreService.Subscriptions.getAll();
+        if (fsSubs && fsSubs.length > 0) {
+          Storage.set('subscriptions', fsSubs);
+        }
+      } catch(e) { console.warn('[Dashboard] Firestore load failed:', e.message); }
+    }
 
     const kpis = calcKPIs(storeFilter);
     const chartData = getSalesChartData(storeFilter);
@@ -352,6 +270,11 @@ const AdminDashboard = (() => {
         ${renderKPICard('⚠️', 'Estoque Baixo', kpis.estoqueBaixo, 'kpi--estoque')}
         ${renderKPICard('🔄', 'MRR', Utils.formatBRL(kpis.mrr), 'kpi--mrr')}
         ${renderKPICard('📦', 'Assinaturas Ativas', kpis.assinaturasAtivas, 'kpi--subs')}
+      </div>
+
+      <div class="dashboard-kpis">
+        ${renderKPICard('🧮', 'Venda Mín. Dia', Utils.formatBRL(kpis.vendaMinimaDiaria), 'kpi--ticket')}
+        ${renderKPICard('🩺', 'Score Financeiro', kpis.scoreFinanceiro, 'kpi--subs')}
       </div>
 
       <!-- Charts Row -->

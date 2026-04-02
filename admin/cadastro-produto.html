@@ -114,6 +114,36 @@ input[type=file]{display:none}
 .validation-box ul{margin:8px 0 0 18px}
 .stock-grid-dynamic{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 .save-hint{font-size:12px;color:var(--text-lt);margin-top:8px}
+.form-mode-toggle{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.mode-pill{padding:10px 16px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:#fff;color:var(--text-md);font-size:12px;font-weight:700;cursor:pointer}
+.mode-pill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.import-panel{margin-top:12px;padding:14px;border-radius:var(--radius-sm);border:1px dashed #b7d4c0;background:#fff}
+.import-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.import-status{margin-top:8px;font-size:12px;color:var(--text-md)}
+.quick-hidden{display:none!important}
+.editor-tools{display:flex;gap:8px;flex-wrap:wrap}
+.editor-btn{padding:8px 12px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#fff;color:var(--primary);font-size:12px;font-weight:700;cursor:pointer}
+.editor-btn.active{background:var(--primary-bg);border-color:var(--primary-lt)}
+.helper-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checklist-card{background:linear-gradient(135deg,#fff,#f7faf7);border:1px solid #d7e7db;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+.status-hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.status-pill{padding:10px 16px;border-radius:999px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.status-pill.ready{background:#e8f5e9;color:#1b5e20}
+.status-pill.warn{background:#fff8e1;color:#8a5c00}
+.status-pill.block{background:#ffebee;color:#b71c1c}
+.checklist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.check-item{padding:12px;border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.06)}
+.check-item strong{display:block;font-size:13px;margin-bottom:4px}
+.check-item small{display:block;font-size:12px;color:var(--text-md)}
+.check-item.ok{border-color:#a5d6a7;background:#f3fbf4}
+.check-item.warn{border-color:#ffe082;background:#fffdf3}
+.check-item.bad{border-color:#ef9a9a;background:#fff5f5}
+.action-split{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.history-box{background:rgba(0,0,0,.03);padding:12px;border-radius:10px;font-size:12px;color:var(--text-md);max-height:180px;overflow:auto}
+.dup-box{display:none;margin-top:12px;padding:12px 14px;border-radius:12px;background:#fff8e1;border:1px solid #ffd54f;color:#7a5a00}
+.dup-box.show{display:block}
+.dup-box.critical{background:#ffebee;border-color:#ef9a9a;color:#a32020}
+.offline-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#fff3e0;color:#8a4b00;font-size:11px;font-weight:700}
 
 /* Tags / Selos */
 .selo-grid{display:flex;flex-wrap:wrap;gap:8px}
@@ -395,6 +425,16 @@ input[type=file]{display:none}
           <button class="enhance-toggle" id="ctrl-show-advanced" onclick="document.getElementById('enhance-advanced').style.display=document.getElementById('enhance-advanced').style.display==='none'?'':'none'" style="font-size:11px">Ajuste manual</button>
         </div>
       </div>
+      <div class="enhance-bar">
+        <div class="editor-tools">
+          <button class="editor-btn" id="btn-rotate-left" type="button">Rotate L</button>
+          <button class="editor-btn" id="btn-rotate-right" type="button">Rotate R</button>
+          <button class="editor-btn active" id="btn-crop-auto" type="button">Auto</button>
+          <button class="editor-btn" id="btn-crop-square" type="button">Square</button>
+          <button class="editor-btn" id="btn-crop-portrait" type="button">Portrait</button>
+        </div>
+      </div>
+
       <!-- Extra Photos Section -->
       <div class="extra-photos" id="extra-photos" style="display:none">
         <h4>📸 Fotos adicionais</h4>
@@ -481,6 +521,10 @@ input[type=file]{display:none}
 
   <!-- STEP 3: FORM -->
   <div class="section" id="sec-form">
+    <div class="form-mode-toggle">
+      <button class="mode-pill active" id="btn-mode-quick" type="button">Modo rapido</button>
+      <button class="mode-pill" id="btn-mode-complete" type="button">Modo completo</button>
+    </div>
     <div class="smart-panel">
       <h4>✨ Assistente de Cadastro</h4>
       <p style="font-size:13px;color:var(--text-md)">Use estes atalhos para deixar o cadastro pronto mesmo quando a pessoa nÃ£o souber preencher tudo.</p>
@@ -490,9 +534,20 @@ input[type=file]{display:none}
         <button class="smart-chip" id="btn-suggest-price" type="button">Sugerir preÃ§o</button>
         <button class="smart-chip" id="btn-fill-sample-stock" type="button">Zerar estoques</button>
       </div>
+      <div class="import-panel">
+        <div class="import-actions">
+          <button class="smart-chip" id="btn-import-xml" type="button">Importar NF-e XML</button>
+          <select id="xml-item-selector" style="display:none;padding:9px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.1);min-width:220px"></select>
+          <button class="smart-chip" id="btn-apply-xml-item" type="button" style="display:none">Usar item da nota</button>
+          <span class="offline-badge" id="sync-badge" style="display:none">Sync pendente</span>
+        </div>
+        <div class="import-status" id="xml-import-status">Puxe fornecedor, custo, codigo de barras e quantidade direto do XML da nota.</div>
+        <input type="file" id="input-xml-import" accept=".xml,text/xml,application/xml" style="display:none">
+      </div>
     </div>
 
     <div class="validation-box" id="validation-box"></div>
+    <div class="dup-box" id="dup-box"></div>
 
     <!-- Basic info -->
     <div class="form-card">
@@ -523,6 +578,19 @@ input[type=file]{display:none}
           <label>Código de barras</label>
           <input type="text" id="f-barcode" placeholder="7891234567890">
           <span class="field-help">Se não existir código de barras, o sistema gera um código interno.</span>
+        </div>
+      </div>
+      <div class="form-row helper-grid">
+        <div class="form-group">
+          <label>Marca</label>
+          <input type="text" id="f-marca" list="brand-suggestions" placeholder="Marca ou linha do produto">
+        </div>
+        <div class="form-group">
+          <label>Status do cadastro</label>
+          <select id="f-status-cadastro">
+            <option value="pronto">Pronto para publicar</option>
+            <option value="rascunho">Salvar como rascunho</option>
+          </select>
         </div>
       </div>
       <div class="form-row single">
@@ -572,7 +640,7 @@ input[type=file]{display:none}
     </div>
 
     <!-- Nutritional info -->
-    <div class="form-card">
+    <div class="form-card form-card-advanced" data-form-mode="complete">
       <h3 id="nutri-section-title"><span>📊</span> Informação Nutricional</h3>
       <div class="form-row">
         <div class="form-group">
@@ -611,7 +679,7 @@ input[type=file]{display:none}
     </div>
 
     <!-- Benefits / How to use -->
-    <div class="form-card">
+    <div class="form-card form-card-advanced" data-form-mode="complete">
       <h3><span>✨</span> Benefícios e Dicas</h3>
       <div class="form-group" style="margin-bottom:12px">
         <label>Benefícios (um por linha)</label>
@@ -642,10 +710,13 @@ input[type=file]{display:none}
         </div>
         <div class="form-group">
           <label>Fornecedor</label>
-          <input type="text" id="f-fornecedor" placeholder="Nome do fornecedor">
+          <input type="text" id="f-fornecedor" list="supplier-suggestions" placeholder="Nome do fornecedor">
         </div>
       </div>
     </div>
+
+    <datalist id="supplier-suggestions"></datalist>
+    <datalist id="brand-suggestions"></datalist>
 
     <div class="btn-row">
       <button class="btn btn--outline" id="btn-back-photo">← Voltar à foto</button>
@@ -665,7 +736,24 @@ input[type=file]{display:none}
       <pre id="json-preview" style="background:rgba(0,0,0,.03);padding:16px;border-radius:8px;font-size:12px;max-height:300px;overflow:auto;white-space:pre-wrap"></pre>
     </div>
 
-    <div class="btn-row">
+    <div class="checklist-card">
+      <div class="status-hero">
+        <div>
+          <h3 style="margin:0 0 4px">Semaforo de publicacao</h3>
+          <p style="font-size:13px;color:var(--text-md)">Veja se ja esta pronto para vender ou se ainda falta algo importante.</p>
+        </div>
+        <span class="status-pill warn" id="ready-pill">Em revisao</span>
+      </div>
+      <div class="checklist-grid" id="readiness-grid"></div>
+    </div>
+
+    <div class="form-card">
+      <h3><span>Historico</span> Revisao</h3>
+      <div class="history-box" id="revision-preview">Nenhuma revisao registrada ainda.</div>
+    </div>
+
+    <div class="action-split">
+      <button class="btn btn--outline" id="btn-save-draft">Salvar rascunho</button>
       <button class="btn btn--outline" id="btn-back-form">← Editar dados</button>
       <button class="btn btn--success" id="btn-save">✅ Salvar Produto</button>
     </div>
@@ -785,6 +873,7 @@ input[type=file]{display:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="../js/core/firebase-config.js"></script>
 <script src="../js/core/firebase-auth.js"></script>
 <script src="../js/core/firestore-service.js"></script>
@@ -831,6 +920,11 @@ const App = {
   selectedBg: 'white',     // background style for e-commerce photo
   availableStores: [],
   isSaving: false,
+  formMode: 'quick',
+  imageRotation: 0,
+  cropMode: 'auto',
+  importedNFe: null,
+  pendingSyncQueue: JSON.parse(localStorage.getItem('cdn_product_sync_queue') || '[]'),
 
   init() {
     this.bindEvents();
@@ -838,6 +932,11 @@ const App = {
     this.initVideo();
     this.loadStores();
     this.renderStockFields();
+    this.loadReferenceLibraries();
+    this.applyFormMode(this.formMode);
+    this.processSyncQueue();
+    window.addEventListener('online', () => this.processSyncQueue());
+    this.updateSyncBadge();
     if (typeof CdnAuth !== 'undefined' && CdnAuth.onReady) {
       CdnAuth.onReady((userData) => {
         window._cadastroAuthUser = userData || null;
@@ -900,6 +999,37 @@ const App = {
       stock[input.dataset.stockStore] = Math.max(0, Number(input.value || 0));
     });
     return stock;
+  },
+
+  loadReferenceLibraries() {
+    const products = []
+      .concat(typeof DataProducts !== 'undefined' ? DataProducts : [])
+      .concat(JSON.parse(localStorage.getItem('cdn_custom_products') || '[]'));
+
+    const supplierSet = new Set();
+    const brandSet = new Set();
+    products.forEach(product => {
+      if (product.fornecedor) supplierSet.add(product.fornecedor);
+      if (product.marca) brandSet.add(product.marca);
+      const firstWord = (product.nome || '').trim().split(/\s+/)[0];
+      if (firstWord && firstWord.length > 2 && /^[A-Za-zÀ-ÿ0-9]+$/.test(firstWord)) {
+        brandSet.add(firstWord);
+      }
+    });
+
+    const supplierList = document.getElementById('supplier-suggestions');
+    const brandList = document.getElementById('brand-suggestions');
+    if (supplierList) supplierList.innerHTML = [...supplierSet].sort().map(item => `<option value="${item}"></option>`).join('');
+    if (brandList) brandList.innerHTML = [...brandSet].sort().map(item => `<option value="${item}"></option>`).join('');
+  },
+
+  applyFormMode(mode) {
+    this.formMode = mode === 'complete' ? 'complete' : 'quick';
+    document.getElementById('btn-mode-quick')?.classList.toggle('active', this.formMode === 'quick');
+    document.getElementById('btn-mode-complete')?.classList.toggle('active', this.formMode === 'complete');
+    document.querySelectorAll('[data-form-mode="complete"]').forEach(card => {
+      card.classList.toggle('quick-hidden', this.formMode !== 'complete');
+    });
   },
 
   // === NAVIGATION ===
@@ -1073,16 +1203,37 @@ const App = {
     document.getElementById('btn-back-photo').onclick = () => this.goToStep(1);
     document.getElementById('btn-preview').onclick = () => this.showPreview();
     document.getElementById('btn-back-form').onclick = () => this.goToStep(3);
-    document.getElementById('btn-save').onclick = () => this.saveProduct();
+    document.getElementById('btn-save').onclick = () => {
+      const statusField = document.getElementById('f-status-cadastro');
+      if (statusField) statusField.value = 'pronto';
+      this.saveProduct();
+    };
+    document.getElementById('btn-save-draft')?.addEventListener('click', () => {
+      const statusField = document.getElementById('f-status-cadastro');
+      if (statusField) statusField.value = 'rascunho';
+      this.saveProduct(true);
+    });
     document.getElementById('btn-new').onclick = () => this.reset();
     document.getElementById('btn-infer-category').onclick = () => this.inferCategoryFromName();
     document.getElementById('btn-generate-barcode').onclick = () => this.applyGeneratedBarcode();
     document.getElementById('btn-suggest-price').onclick = () => this.suggestPriceFromCost();
     document.getElementById('btn-fill-sample-stock').onclick = () => this.fillStockZeros();
+    document.getElementById('btn-mode-quick')?.addEventListener('click', () => this.applyFormMode('quick'));
+    document.getElementById('btn-mode-complete')?.addEventListener('click', () => this.applyFormMode('complete'));
+    document.getElementById('btn-import-xml')?.addEventListener('click', () => document.getElementById('input-xml-import')?.click());
+    document.getElementById('input-xml-import')?.addEventListener('change', (e) => this.handleXmlImport(e.target.files?.[0]));
+    document.getElementById('btn-apply-xml-item')?.addEventListener('click', () => this.applySelectedXmlItem());
+    document.getElementById('btn-rotate-left')?.addEventListener('click', () => this.adjustImageTransform(-90, this.cropMode));
+    document.getElementById('btn-rotate-right')?.addEventListener('click', () => this.adjustImageTransform(90, this.cropMode));
+    document.getElementById('btn-crop-auto')?.addEventListener('click', () => this.adjustImageTransform(0, 'auto', false));
+    document.getElementById('btn-crop-square')?.addEventListener('click', () => this.adjustImageTransform(0, 'square', false));
+    document.getElementById('btn-crop-portrait')?.addEventListener('click', () => this.adjustImageTransform(0, 'portrait', false));
 
     document.getElementById('f-custo').addEventListener('blur', () => this.suggestPriceFromCost(false));
     document.getElementById('f-margem').addEventListener('blur', () => this.suggestPriceFromCost(false));
     document.getElementById('f-nome').addEventListener('blur', () => this.inferCategoryFromName(false));
+    document.getElementById('f-nome').addEventListener('blur', () => this.suggestBrandFromName());
+    document.getElementById('f-barcode').addEventListener('blur', () => this.checkDuplicateSignals());
 
     // Selos toggle
     document.querySelectorAll('.selo-chip').forEach(chip => {
@@ -1114,13 +1265,16 @@ const App = {
   },
 
   // === IMAGE HANDLING ===
-  handleImage(file) {
+  async handleImage(file) {
     if (!file) return;
+    const preparedFile = await this.prepareImageFile(file, { maxSide: 2400, quality: 0.88 });
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const img = new Image();
       img.onload = () => {
         this.originalImage = img;
+        this.imageRotation = 0;
+        this.cropMode = 'auto';
         this.showValidation([]);
         document.getElementById('capture-zone').style.display = 'none';
         document.getElementById('preview-area').style.display = '';
@@ -1144,16 +1298,61 @@ const App = {
       };
       img.src = e.target.result;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(preparedFile);
+  },
+
+  async prepareImageFile(file, { maxSide = 2000, quality = 0.86 } = {}) {
+    if (!file || !file.type || !file.type.startsWith('image/')) return file;
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const instance = new Image();
+        instance.onload = () => resolve(instance);
+        instance.onerror = reject;
+        instance.src = imageUrl;
+      });
+      const maxDim = Math.max(img.naturalWidth, img.naturalHeight);
+      if (maxDim <= maxSide && file.size < 2.5 * 1024 * 1024) return file;
+      const ratio = Math.min(1, maxSide / maxDim);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * ratio);
+      canvas.height = Math.round(img.naturalHeight * ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+      return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  },
+
+  adjustImageTransform(rotationDelta = 0, cropMode = this.cropMode, updateRotation = true) {
+    if (updateRotation && rotationDelta) {
+      this.imageRotation = (this.imageRotation + rotationDelta + 360) % 360;
+    } else if (!updateRotation && rotationDelta) {
+      this.imageRotation = (rotationDelta + 360) % 360;
+    }
+    this.cropMode = cropMode || 'auto';
+    ['btn-crop-auto', 'btn-crop-square', 'btn-crop-portrait'].forEach(id => {
+      document.getElementById(id)?.classList.remove('active');
+    });
+    const activeButton = {
+      auto: 'btn-crop-auto',
+      square: 'btn-crop-square',
+      portrait: 'btn-crop-portrait'
+    }[this.cropMode] || 'btn-crop-auto';
+    document.getElementById(activeButton)?.classList.add('active');
+    this._bgRemovedBlob = null;
+    this.applyEnhancements();
   },
 
   // === EXTRA PHOTOS ===
-  handleExtraPhoto(file) {
+  async handleExtraPhoto(file) {
     if (!file) return;
     const type = this.pendingExtraType || 'outra';
     const labels = {traseira:'Trás',nutricional:'Nutricional',ingredientes:'Ingredientes',barcode:'Código',outra:'Extra'};
+    const preparedFile = await this.prepareImageFile(file, { maxSide: 1800, quality: 0.84 });
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       this.extraPhotos.push({ type, dataUrl: e.target.result });
       // Mark button as done
       const btn = document.querySelector(`.extra-photo-btn[data-type="${type}"]`);
@@ -1166,9 +1365,10 @@ const App = {
       thumb.dataset.idx = idx;
       thumb.innerHTML = `<img src="${e.target.result}" alt="${labels[type]||type}"><span class="extra-thumb-label">${labels[type]||type}</span><button class="extra-thumb-remove" onclick="App.removeExtraPhoto(${idx})" title="Remover">×</button>`;
       thumbs.appendChild(thumb);
+      await this.extractDataFromExtraPhoto(type, e.target.result);
       this.toast(`Foto "${labels[type]}" adicionada!`);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(preparedFile);
   },
 
   removeExtraPhoto(idx) {
@@ -1190,6 +1390,125 @@ const App = {
       thumb.innerHTML = `<img src="${p.dataUrl}" alt="${labels[p.type]||p.type}"><span class="extra-thumb-label">${labels[p.type]||p.type}</span><button class="extra-thumb-remove" onclick="App.removeExtraPhoto(${i})" title="Remover">×</button>`;
       thumbs.appendChild(thumb);
     });
+  },
+
+  async extractDataFromExtraPhoto(type, dataUrl) {
+    try {
+      if (type === 'barcode') {
+        const code = await this.detectBarcodeInImage(dataUrl);
+        if (code) {
+          document.getElementById('f-barcode').value = code;
+          document.getElementById('f-barcode').classList.add('auto-filled');
+          this.toast(`Codigo detectado: ${code}`);
+        }
+      }
+      if (type === 'nutricional' || type === 'ingredientes') {
+        const text = await this.ocrSingleImage(dataUrl);
+        if (text) this.parseOCRText(text);
+      }
+    } catch (err) {
+      console.warn('Extra photo extraction failed:', err);
+    }
+  },
+
+  async detectBarcodeInImage(dataUrl) {
+    if (!('BarcodeDetector' in window)) return '';
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const instance = new Image();
+        instance.onload = () => resolve(instance);
+        instance.onerror = reject;
+        instance.src = dataUrl;
+      });
+      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'] });
+      const codes = await detector.detect(img);
+      return codes?.[0]?.rawValue || '';
+    } catch (err) {
+      return '';
+    }
+  },
+
+  async ocrSingleImage(dataUrl) {
+    const img = await new Promise((resolve, reject) => {
+      const instance = new Image();
+      instance.onload = () => resolve(instance);
+      instance.onerror = reject;
+      instance.src = dataUrl;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const result = await Tesseract.recognize(canvas, 'por');
+    return result?.data?.text || '';
+  },
+
+  async handleXmlImport(file) {
+    if (!file) return;
+    try {
+      const xmlText = await file.text();
+      const parsed = FirestoreService.parseNFeXML(xmlText);
+      this.importedNFe = parsed;
+      const selector = document.getElementById('xml-item-selector');
+      const applyBtn = document.getElementById('btn-apply-xml-item');
+      const status = document.getElementById('xml-import-status');
+      if (!selector || !applyBtn || !status) return;
+
+      selector.innerHTML = parsed.items.map((item, index) =>
+        `<option value="${index}">${item.nome} | Qtd ${item.quantidade} | R$ ${Number(item.valorUnitario || 0).toFixed(2)}</option>`
+      ).join('');
+      selector.style.display = parsed.items.length > 1 ? '' : '';
+      applyBtn.style.display = '';
+      status.textContent = `NF-e ${parsed.nfInfo.numero || '-'} de ${parsed.nfInfo.fornecedor || 'Fornecedor'} com ${parsed.items.length} item(ns).`;
+      if (parsed.items.length === 1) this.applyImportedItem(parsed.items[0], parsed.nfInfo);
+    } catch (err) {
+      document.getElementById('xml-import-status').textContent = 'Nao consegui ler o XML. Confira se o arquivo esta correto.';
+      console.error('XML import error:', err);
+    }
+  },
+
+  applySelectedXmlItem() {
+    if (!this.importedNFe) return;
+    const selector = document.getElementById('xml-item-selector');
+    const index = Number(selector?.value || 0);
+    const item = this.importedNFe.items[index];
+    if (item) this.applyImportedItem(item, this.importedNFe.nfInfo);
+  },
+
+  applyImportedItem(item, nfInfo = {}) {
+    document.getElementById('f-nome').value = item.nome || '';
+    document.getElementById('f-nome').classList.add('auto-filled');
+    if (item.ean) {
+      document.getElementById('f-barcode').value = item.ean;
+      document.getElementById('f-barcode').classList.add('auto-filled');
+    }
+    document.getElementById('f-fornecedor').value = nfInfo.fornecedor || '';
+    document.getElementById('f-fornecedor').classList.add('auto-filled');
+    document.getElementById('f-custo').value = Number(item.valorUnitario || 0).toFixed(2);
+    document.querySelector('.var-peso')?.setAttribute('placeholder', item.unidade ? `Peso (${item.unidade})` : 'Peso');
+    if (document.querySelector('.var-preco') && !document.querySelector('.var-preco').value) {
+      this.suggestPriceFromCost(false);
+    }
+    const stockInputs = document.querySelectorAll('[data-stock-store]');
+    if (stockInputs.length) {
+      stockInputs[0].value = Math.max(0, Math.round(Number(item.quantidade || 0)));
+    }
+    this.inferCategoryFromName(false);
+    this.suggestBrandFromName();
+    document.getElementById('xml-import-status').textContent = `Item importado: ${item.nome}. Revise peso, preco e descricao antes de salvar.`;
+  },
+
+  buildCategoryPromptHints() {
+    const categoria = document.getElementById('f-categoria')?.value || '';
+    const hints = {
+      capsulas: 'Se for capsulas, priorize dose, quantidade de capsulas, concentracao por porcao e claims que aparecem na embalagem.',
+      mel: 'Se for mel ou derivados, diferencie mel, propolis, geleia real e extrato. Evite promessas medicas.',
+      chas: 'Se for cha, priorize planta principal, tipo de preparo, gramatura e se e folhas, sachês ou po.',
+      graos: 'Se for graos ou sementes, priorize peso liquido, tipo do grao e usos culinarios.',
+      suplementos: 'Se for suplemento, priorize dose, sabor, composicao principal e numero de porcoes.',
+      temperos: 'Se for tempero, priorize intensidade, forma (po, raiz, folha), usos culinarios e gramatura.'
+    };
+    return hints[categoria] || '';
   },
 
   // === AI CHAT ===
@@ -1549,7 +1868,52 @@ Retorne APENAS este JSON:
     if (!img) return;
 
     const maxDim = 1200;
-    let w = img.naturalWidth, h = img.naturalHeight;
+    const rotation = this.imageRotation || 0;
+    const sourceCanvas = document.createElement('canvas');
+    const sourceCtx = sourceCanvas.getContext('2d');
+    const rotationTurns = ((rotation % 360) + 360) % 360;
+    if (rotationTurns === 90 || rotationTurns === 270) {
+      sourceCanvas.width = img.naturalHeight;
+      sourceCanvas.height = img.naturalWidth;
+      sourceCtx.translate(sourceCanvas.width / 2, sourceCanvas.height / 2);
+      sourceCtx.rotate(rotationTurns * Math.PI / 180);
+      sourceCtx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    } else if (rotationTurns === 180) {
+      sourceCanvas.width = img.naturalWidth;
+      sourceCanvas.height = img.naturalHeight;
+      sourceCtx.translate(sourceCanvas.width / 2, sourceCanvas.height / 2);
+      sourceCtx.rotate(Math.PI);
+      sourceCtx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    } else {
+      sourceCanvas.width = img.naturalWidth;
+      sourceCanvas.height = img.naturalHeight;
+      sourceCtx.drawImage(img, 0, 0);
+    }
+
+    let cropX = 0;
+    let cropY = 0;
+    let cropW = sourceCanvas.width;
+    let cropH = sourceCanvas.height;
+    const cropMode = this.cropMode || 'auto';
+    if (cropMode === 'square') {
+      const side = Math.min(sourceCanvas.width, sourceCanvas.height);
+      cropX = Math.round((sourceCanvas.width - side) / 2);
+      cropY = Math.round((sourceCanvas.height - side) / 2);
+      cropW = side;
+      cropH = side;
+    } else if (cropMode === 'portrait') {
+      const targetRatio = 4 / 5;
+      const currentRatio = sourceCanvas.width / sourceCanvas.height;
+      if (currentRatio > targetRatio) {
+        cropW = Math.round(sourceCanvas.height * targetRatio);
+        cropX = Math.round((sourceCanvas.width - cropW) / 2);
+      } else {
+        cropH = Math.round(sourceCanvas.width / targetRatio);
+        cropY = Math.round((sourceCanvas.height - cropH) / 2);
+      }
+    }
+
+    let w = cropW, h = cropH;
     if (w > maxDim || h > maxDim) {
       const ratio = Math.min(maxDim / w, maxDim / h);
       w = Math.round(w * ratio);
@@ -1575,7 +1939,7 @@ Retorne APENAS este JSON:
         // Get image blob for AI processing
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = w; tempCanvas.height = h;
-        tempCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        tempCanvas.getContext('2d').drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, w, h);
         const srcBlob = await new Promise(r => tempCanvas.toBlob(r, 'image/png'));
 
         this._bgRemovedBlob = await window._removeBackground(srcBlob, {
@@ -1608,7 +1972,7 @@ Retorne APENAS este JSON:
       URL.revokeObjectURL(bgImg.src);
     } else {
       // No bg removal — draw original
-      ctx.drawImage(img, 0, 0, w, h);
+      ctx.drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, w, h);
     }
 
     // Step 3: Apply brightness, contrast, auto-enhance
@@ -2145,7 +2509,7 @@ Retorne APENAS este JSON:
       // Build prompt
       let prompt = `Você é um especialista em produtos naturais para uma loja chamada Clube do Natural. Analise as fotos deste produto e retorne um JSON.
 
-${imageParts.length > 1 ? `Foram enviadas ${imageParts.length} fotos:\n${photoLabels.map((l,i) => `- Imagem ${i+1}: ${l}`).join('\n')}\n` : ''}
+${imageParts.length > 1 ? `Foram enviadas ${imageParts.length} fotos:\n${photoLabels.map((l,i) => `- Imagem ${i+1}: ${l}`).join('\n')}\n` : ''}${this.buildCategoryPromptHints() ? `Foco da categoria: ${this.buildCategoryPromptHints()}\n` : ''}
 REGRAS IMPORTANTES:
 1. Retorne APENAS o JSON puro, sem markdown, sem \`\`\`, sem explicação
 2. NUNCA invente informações — só extraia o que é VISÍVEL nas fotos ou que é FATO COMPROVADO sobre o produto
@@ -2895,8 +3259,158 @@ Responda em português brasileiro.`;
     return { errors, warnings };
   },
 
+  suggestBrandFromName() {
+    const brandField = document.getElementById('f-marca');
+    if (!brandField || brandField.value) return false;
+    const nome = (document.getElementById('f-nome').value || '').trim();
+    if (!nome) return false;
+    const brand = nome.split(/\s+/).slice(0, 2).join(' ').trim();
+    if (brand.length < 3) return false;
+    brandField.value = brand;
+    brandField.classList.add('auto-filled');
+    return true;
+  },
+
+  async checkDuplicateSignals(product = null) {
+    const candidate = product || this.buildProductObject();
+    const box = document.getElementById('dup-box');
+    if (!box || !candidate.nome) return { exact: [], similar: [] };
+
+    const exact = [];
+    const similar = [];
+    const slug = this.slugify(candidate.nome);
+    const localProducts = []
+      .concat(typeof DataProducts !== 'undefined' ? DataProducts : [])
+      .concat(JSON.parse(localStorage.getItem('cdn_custom_products') || '[]'));
+
+    localProducts.forEach(existing => {
+      if (!existing || !existing.id) return;
+      if (existing.id === candidate.id) return;
+      const sameBarcode = candidate.codigoBarras && existing.codigoBarras && existing.codigoBarras === candidate.codigoBarras;
+      const sameSlug = existing.id === slug;
+      const nameScore = this.computeNameSimilarity(candidate.nome, existing.nome || '');
+      if (sameBarcode || sameSlug) exact.push(existing);
+      else if (nameScore >= 0.72) similar.push(existing);
+    });
+
+    if (CdnFirebase?.ready && navigator.onLine) {
+      try {
+        const db = CdnFirebase.db;
+        if (candidate.codigoBarras) {
+          const snap = await db.collection('produtos').where('codigoBarras', '==', candidate.codigoBarras).limit(3).get();
+          snap.docs.forEach(doc => {
+            const item = doc.data();
+            if (doc.id !== candidate.id) exact.push({ id: doc.id, nome: item.nome || doc.id, codigoBarras: item.codigoBarras || '' });
+          });
+        }
+        const existingDoc = await db.collection('produtos').doc(candidate.id).get();
+        if (existingDoc.exists) exact.push({ id: existingDoc.id, nome: existingDoc.data().nome || existingDoc.id, codigoBarras: existingDoc.data().codigoBarras || '' });
+      } catch (err) {
+        console.warn('Duplicate lookup failed:', err);
+      }
+    }
+
+    const dedupe = (items) => {
+      const seen = new Set();
+      return items.filter(item => {
+        const key = `${item.id || ''}:${item.codigoBarras || ''}:${item.nome || ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    const exactItems = dedupe(exact);
+    const similarItems = dedupe(similar).slice(0, 5);
+    if (!exactItems.length && !similarItems.length) {
+      box.className = 'dup-box';
+      box.innerHTML = '';
+      return { exact: exactItems, similar: similarItems };
+    }
+
+    const rows = []
+      .concat(exactItems.map(item => `<li><strong>Duplicado direto:</strong> ${item.nome || item.id} ${item.codigoBarras ? `(${item.codigoBarras})` : ''}</li>`))
+      .concat(similarItems.map(item => `<li><strong>Nome parecido:</strong> ${item.nome || item.id}</li>`));
+    box.className = `dup-box show${exactItems.length ? ' critical' : ''}`;
+    box.innerHTML = `<strong>${exactItems.length ? 'Possivel duplicidade critica' : 'Atenção para duplicidade'}</strong><ul>${rows.join('')}</ul>`;
+    return { exact: exactItems, similar: similarItems };
+  },
+
+  computeNameSimilarity(a, b) {
+    const tokensA = new Set(this.slugify(a).split('-').filter(Boolean));
+    const tokensB = new Set(this.slugify(b).split('-').filter(Boolean));
+    if (!tokensA.size || !tokensB.size) return 0;
+    let intersection = 0;
+    tokensA.forEach(token => { if (tokensB.has(token)) intersection += 1; });
+    return intersection / Math.max(tokensA.size, tokensB.size);
+  },
+
+  buildReadiness(product) {
+    const firstVariation = product.variacoes?.[0] || {};
+    const stockTotal = Object.values(product.estoque || {}).reduce((acc, qty) => acc + Number(qty || 0), 0);
+    const items = [
+      { key: 'foto', label: 'Foto principal', state: this.originalImage ? 'ok' : 'bad', note: this.originalImage ? 'Foto pronta para IA e catalogo.' : 'Falta a foto principal.' },
+      { key: 'preco', label: 'Preco de venda', state: Number(firstVariation.preco) > 0 ? 'ok' : 'bad', note: Number(firstVariation.preco) > 0 ? `Preco inicial R$ ${Number(firstVariation.preco).toFixed(2)}` : 'Preencha pelo menos um preco.' },
+      { key: 'estoque', label: 'Estoque', state: stockTotal > 0 ? 'ok' : 'warn', note: stockTotal > 0 ? `${stockTotal} unidade(s) distribuidas.` : 'Sem estoque informado.' },
+      { key: 'descricao', label: 'Descricao', state: product.descricao ? 'ok' : 'warn', note: product.descricao ? 'Descricao preenchida.' : 'Falta uma descricao curta de venda.' },
+      { key: 'codigo', label: 'Codigo', state: product.codigoBarras ? 'ok' : 'warn', note: product.codigoBarras ? 'Codigo pronto para busca.' : 'Vai usar codigo interno se salvar agora.' },
+      { key: 'fornecedor', label: 'Fornecedor', state: product.fornecedor ? 'ok' : 'warn', note: product.fornecedor ? product.fornecedor : 'Fornecedor ainda nao informado.' }
+    ];
+    const hasBlocking = items.some(item => item.state === 'bad');
+    const hasWarn = items.some(item => item.state === 'warn');
+    return {
+      items,
+      status: hasBlocking ? 'block' : (hasWarn ? 'warn' : 'ready'),
+      label: hasBlocking ? 'Bloqueado' : (hasWarn ? 'Revisar' : 'Pronto para vender')
+    };
+  },
+
+  renderReadinessChecklist(product) {
+    const readiness = this.buildReadiness(product);
+    const grid = document.getElementById('readiness-grid');
+    const pill = document.getElementById('ready-pill');
+    if (grid) {
+      grid.innerHTML = readiness.items.map(item => `
+        <div class="check-item ${item.state === 'bad' ? 'bad' : item.state}">
+          <strong>${item.label}</strong>
+          <small>${item.note}</small>
+        </div>
+      `).join('');
+    }
+    if (pill) {
+      pill.textContent = readiness.label;
+      pill.className = `status-pill ${readiness.status}`;
+    }
+    return readiness;
+  },
+
+  renderRevisionPreview(product) {
+    const target = document.getElementById('revision-preview');
+    if (!target) return;
+    const history = product._revisionHistory || [];
+    if (!history.length) {
+      target.textContent = 'Nenhuma revisao registrada ainda.';
+      return;
+    }
+    target.innerHTML = history.map(item => {
+      const when = item.at ? new Date(item.at).toLocaleString('pt-BR') : 'agora';
+      return `<div><strong>${item.action || 'Atualizacao'}</strong> - ${when}<br>${item.by || 'Operador'}${item.note ? ` - ${item.note}` : ''}</div>`;
+    }).join('<hr style="border:none;border-top:1px solid rgba(0,0,0,.06);margin:10px 0">');
+  },
+
+  createRevisionEntry(statusLabel) {
+    const authUser = window._cadastroAuthUser || {};
+    const autoFilledFields = [...document.querySelectorAll('.auto-filled[id]')].map(el => el.id);
+    return {
+      at: new Date().toISOString(),
+      by: authUser.name || authUser.nome || authUser.email || authUser.role || 'Operador',
+      role: authUser.role || '',
+      action: statusLabel === 'rascunho' ? 'Rascunho salvo' : 'Produto publicado',
+      note: autoFilledFields.length ? `IA/assistente ajudou em: ${autoFilledFields.join(', ')}` : 'Cadastro manual'
+    };
+  },
+
   // === PREVIEW ===
-  showPreview() {
+  async showPreview() {
     const nome = document.getElementById('f-nome').value.trim();
     if (!nome) { this.showValidation(['Preencha o nome do produto.']); return; }
 
@@ -2908,6 +3422,7 @@ Responda em português brasileiro.`;
       return;
     }
     this.showValidation(validation.warnings, false);
+    await this.checkDuplicateSignals(product);
 
     const selos = this.getSelectedSelos();
     const imgUrl = this.enhancedBlob ? URL.createObjectURL(this.enhancedBlob) : '';
@@ -2935,6 +3450,9 @@ Responda em português brasileiro.`;
 
     // Build JSON preview
     document.getElementById('json-preview').textContent = JSON.stringify(product, null, 2);
+    product._revisionHistory = [this.createRevisionEntry(product.statusCadastro)];
+    this.renderReadinessChecklist(product);
+    this.renderRevisionPreview(product);
 
     this.goToStep(4);
   },
@@ -2977,9 +3495,12 @@ Responda em português brasileiro.`;
       custoUnitario: +document.getElementById('f-custo').value || 0,
       margemLucro: +document.getElementById('f-margem').value || 55,
       codigoBarras: document.getElementById('f-barcode').value.trim(),
+      marca: document.getElementById('f-marca')?.value.trim() || '',
       fornecedor: document.getElementById('f-fornecedor').value.trim(),
       estoqueMinimo: +document.getElementById('f-est-minimo').value || 10,
-      ativo: true,
+      statusCadastro: document.getElementById('f-status-cadastro')?.value || 'pronto',
+      ativo: (document.getElementById('f-status-cadastro')?.value || 'pronto') !== 'rascunho',
+      publicado: (document.getElementById('f-status-cadastro')?.value || 'pronto') !== 'rascunho',
       destaque: false,
       recorrencia: { elegivel: false },
       _createdAt: new Date().toISOString(),
@@ -2988,9 +3509,14 @@ Responda em português brasileiro.`;
   },
 
   // === SAVE ===
-  async saveProduct() {
+  async saveProduct(forceDraft = false) {
     if (this.isSaving) return;
     const product = this.buildProductObject();
+    if (forceDraft) {
+      product.statusCadastro = 'rascunho';
+      product.ativo = false;
+      product.publicado = false;
+    }
     const selectedStore = document.getElementById('store-selector').value;
     product._loja = selectedStore;
     const validation = this.validateProduct(product, { forSave: true });
@@ -3006,6 +3532,17 @@ Responda em português brasileiro.`;
       document.getElementById('f-barcode').value = product.codigoBarras;
     }
 
+    const duplicates = await this.checkDuplicateSignals(product);
+    if (duplicates.exact.length) {
+      this.goToStep(3);
+      this.showValidation(['Existe um produto com o mesmo codigo ou identificador. Revise antes de salvar.']);
+      return;
+    }
+
+    product._revisionHistory = (product._revisionHistory || []).concat(this.createRevisionEntry(product.statusCadastro));
+    this.renderReadinessChecklist(product);
+    this.renderRevisionPreview(product);
+
     this.isSaving = true;
     const saveBtn = document.getElementById('btn-save');
     if (saveBtn) {
@@ -3020,27 +3557,23 @@ Responda em português brasileiro.`;
     else saved.push(product);
     localStorage.setItem('cdn_custom_products', JSON.stringify(saved));
 
-    // Save image as base64 if we have one
-    if (this.enhancedBlob) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const images = JSON.parse(localStorage.getItem('cdn_product_images') || '{}');
-        images[product.id] = reader.result;
-        localStorage.setItem('cdn_product_images', JSON.stringify(images));
-      };
-      reader.readAsDataURL(this.enhancedBlob);
+    const imageDataUrl = this.enhancedBlob ? await this.blobToDataUrl(this.enhancedBlob) : '';
+    if (imageDataUrl) {
+      const images = JSON.parse(localStorage.getItem('cdn_product_images') || '{}');
+      images[product.id] = imageDataUrl;
+      localStorage.setItem('cdn_product_images', JSON.stringify(images));
     }
 
     // Save to Firestore (per store)
-    await this.saveToFirestore(product, selectedStore);
+    await this.saveToFirestore(product, selectedStore, imageDataUrl);
 
     // Update count
     const lojaLabel = selectedStore === 'todas' ? 'todas as lojas' : selectedStore;
     document.getElementById('success-msg').textContent =
-      `"${product.nome}" salvo com sucesso para ${lojaLabel}! Total: ${saved.length} produto(s) cadastrado(s).`;
+      `"${product.nome}" ${product.statusCadastro === 'rascunho' ? 'salvo como rascunho' : 'salvo com sucesso'} para ${lojaLabel}! Total: ${saved.length} produto(s) cadastrado(s).`;
 
     this.goToStep(5);
-    this.toast('Produto salvo!');
+    this.toast(product.statusCadastro === 'rascunho' ? 'Rascunho salvo!' : 'Produto salvo!');
 
     // Populate video script preview
     const script = this.generateVideoScript();
@@ -3069,10 +3602,11 @@ Responda em português brasileiro.`;
   },
 
   // === FIRESTORE SAVE ===
-  async saveToFirestore(product, storeId) {
+  async saveToFirestore(product, storeId, imageDataUrl = '') {
     try {
-      if (!CdnFirebase || !CdnFirebase.ready) {
-        console.warn('Firestore not ready, skipping cloud save');
+      if (!CdnFirebase || !CdnFirebase.ready || !navigator.onLine) {
+        this.queuePendingSync(product, storeId, imageDataUrl);
+        console.warn('Firestore not ready, queueing sync');
         return;
       }
       const db = CdnFirebase.db;
@@ -3081,14 +3615,9 @@ Responda em português brasileiro.`;
       // Remove blob references
       delete productDoc.enhancedBlob;
 
-      // Save image as base64 URL in the product doc
-      if (this.enhancedBlob) {
-        const reader = new FileReader();
-        const base64Promise = new Promise(resolve => {
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(this.enhancedBlob);
-        });
-        productDoc.imagem = await base64Promise;
+      // Save image in Storage/CDN and keep only URL in the product doc
+      if (imageDataUrl) {
+        productDoc.imagem = await this.uploadImageToStorage(product.id, imageDataUrl);
       }
 
       await db.collection('produtos').doc(product.id).set(productDoc, { merge: true });
@@ -3099,10 +3628,11 @@ Responda em português brasileiro.`;
 
       for (const store of targetStores) {
         await db.collection('lojas').doc(store.id).collection('produtos_ativos').doc(product.id).set({
-          ativo: true,
+          ativo: !!product.publicado,
           productId: product.id,
           precoLocal: product.preco,
           nome: product.nome,
+          statusCadastro: product.statusCadastro || 'pronto',
           imagem: productDoc.imagem || product.imagem || '',
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -3118,11 +3648,79 @@ Responda em português brasileiro.`;
       console.log(`[Firestore] Product ${product.id} saved to ${storeId}`);
     } catch (err) {
       console.error('[Firestore] Save error:', err);
-      // Product is still saved locally, so don't block the UX
+      this.queuePendingSync(product, storeId, imageDataUrl);
       this.toast('Salvo localmente. Sincroniza com a nuvem quando possível.');
     } finally {
       this.isSaving = false;
     }
+  },
+
+  async blobToDataUrl(blob) {
+    if (!blob) return '';
+    return await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result || '');
+      reader.readAsDataURL(blob);
+    });
+  },
+
+  async uploadImageToStorage(productId, dataUrl) {
+    if (!dataUrl) return '';
+    if (!CdnFirebase?.storage) return dataUrl;
+    try {
+      const ext = dataUrl.startsWith('data:image/png') ? 'png' : 'jpg';
+      const ref = CdnFirebase.storage.ref(`produto-imagens/${productId}/principal.${ext}`);
+      const snapshot = await ref.putString(dataUrl, 'data_url', {
+        contentType: ext === 'png' ? 'image/png' : 'image/jpeg',
+        cacheControl: 'public,max-age=31536000,immutable'
+      });
+      return await snapshot.ref.getDownloadURL();
+    } catch (err) {
+      console.warn('Storage upload unavailable, falling back to embedded image:', err);
+      return dataUrl;
+    }
+  },
+
+  queuePendingSync(product, storeId, imageDataUrl = '') {
+    const queue = JSON.parse(localStorage.getItem('cdn_product_sync_queue') || '[]');
+    const payload = {
+      id: `${product.id}:${storeId}`,
+      product,
+      storeId,
+      imageDataUrl,
+      queuedAt: new Date().toISOString()
+    };
+    const existingIndex = queue.findIndex(item => item.id === payload.id);
+    if (existingIndex >= 0) queue[existingIndex] = payload;
+    else queue.push(payload);
+    localStorage.setItem('cdn_product_sync_queue', JSON.stringify(queue));
+    this.pendingSyncQueue = queue;
+    this.updateSyncBadge();
+  },
+
+  async processSyncQueue() {
+    if (!navigator.onLine || !CdnFirebase?.ready) return;
+    const queue = JSON.parse(localStorage.getItem('cdn_product_sync_queue') || '[]');
+    if (!queue.length) return;
+    const remaining = [];
+    for (const item of queue) {
+      try {
+        await this.saveToFirestore(item.product, item.storeId, item.imageDataUrl);
+      } catch (err) {
+        remaining.push(item);
+      }
+    }
+    localStorage.setItem('cdn_product_sync_queue', JSON.stringify(remaining));
+    this.pendingSyncQueue = remaining;
+    this.updateSyncBadge();
+  },
+
+  updateSyncBadge() {
+    const badge = document.getElementById('sync-badge');
+    if (!badge) return;
+    const queue = JSON.parse(localStorage.getItem('cdn_product_sync_queue') || '[]');
+    badge.style.display = queue.length ? 'inline-flex' : 'none';
+    badge.textContent = queue.length ? `${queue.length} sync pendente` : '';
   },
 
   // === HELPERS ===
@@ -3162,6 +3760,15 @@ Responda em português brasileiro.`;
     document.querySelectorAll('.selo-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('f-margem').value = '55';
     document.getElementById('f-est-minimo').value = '10';
+    const statusField = document.getElementById('f-status-cadastro');
+    if (statusField) statusField.value = 'pronto';
+    this.imageRotation = 0;
+    this.cropMode = 'auto';
+    this.importedNFe = null;
+    document.getElementById('dup-box')?.classList.remove('show', 'critical');
+    document.getElementById('dup-box').innerHTML = '';
+    this.renderRevisionPreview({ _revisionHistory: [] });
+    this.renderReadinessChecklist({ variacoes: [{ preco: 0 }], estoque: {} });
 
     // Reset variations to one empty row
     document.getElementById('var-list').innerHTML = `

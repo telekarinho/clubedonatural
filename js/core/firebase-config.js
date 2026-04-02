@@ -31,6 +31,7 @@
     app: null,
     auth: null,
     db: null,
+    storage: null,
     config: config,
 
     init() {
@@ -49,6 +50,7 @@
         }
         this.auth = firebase.auth();
         this.db = firebase.firestore();
+        this.storage = firebase.storage();
 
         // Enable offline persistence (must be called before any other Firestore call)
         this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});

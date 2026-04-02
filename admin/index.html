@@ -192,6 +192,24 @@
         <span>⚠️ Modo offline — <strong id="sync-pending-count">0</strong> operações pendentes de sincronização</span>
       </div>
 
+      <section id="admin-context" class="admin-context" hidden>
+        <div class="admin-context__main">
+          <div class="admin-context__eyebrow">
+            <span id="admin-context-scope" class="admin-context__scope">Visão geral</span>
+          </div>
+          <h2 id="admin-context-title" class="admin-context__title">Painel administrativo</h2>
+          <p id="admin-context-description" class="admin-context__description">Resumo rápido da tela e do próximo passo recomendado.</p>
+        </div>
+        <div class="admin-context__actions" id="admin-context-actions"></div>
+        <div class="admin-context__tips">
+          <div class="admin-context__tips-head">
+            <strong>Próximos passos</strong>
+            <button type="button" id="admin-context-help" class="admin-context__help-btn">Ver passo a passo</button>
+          </div>
+          <ul id="admin-context-tips" class="admin-context__tips-list"></ul>
+        </div>
+      </section>
+
       <!-- Page Container -->
       <div id="admin-pages" class="admin-pages">
         <section class="admin-page admin-page--active" data-page="dashboard">
@@ -332,6 +350,21 @@
 
   <!-- Sidebar Overlay (mobile) -->
   <div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
+
+  <div id="admin-help-modal" class="admin-help-modal" hidden>
+    <div id="admin-help-backdrop" class="admin-help-modal__backdrop"></div>
+    <div class="admin-help-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-help-title">
+      <div class="admin-help-modal__header">
+        <div>
+          <div class="admin-help-modal__eyebrow">Guia simples</div>
+          <h3 id="admin-help-title" class="admin-help-modal__title">Como usar esta tela</h3>
+        </div>
+        <button type="button" id="admin-help-close" class="admin-help-modal__close" aria-label="Fechar ajuda">×</button>
+      </div>
+      <p id="admin-help-description" class="admin-help-modal__description"></p>
+      <ol id="admin-help-steps" class="admin-help-modal__steps"></ol>
+    </div>
+  </div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>

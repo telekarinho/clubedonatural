@@ -25,6 +25,105 @@ const AdminApp = (() => {
     afiliados: 'Afiliados',
   };
 
+  const PAGE_META = {
+    dashboard: {
+      description: 'Acompanhe a operação em poucos segundos e veja o que precisa de ação agora.',
+      tips: [
+        'Confira vendas, pedidos e alertas da unidade.',
+        'Se encontrar risco ou queda, siga para Financeiro ou Pedidos.',
+        'Troque a loja no topo para revisar outra unidade sem se perder.',
+      ],
+      actions: [
+        { page: 'pedidos', title: 'Ver pedidos', hint: 'Acompanhar entradas do dia' },
+        { page: 'financeiro', title: 'Abrir financeiro', hint: 'Conferir meta, caixa e margem' },
+      ],
+    },
+    pedidos: {
+      description: 'Aqui ficam os pedidos da loja atual e o fluxo diário de atendimento.',
+      tips: [
+        'Busque primeiro os pedidos novos ou em preparação.',
+        'Se houver divergência de pagamento, valide no Caixa.',
+        'Pedidos corretos alimentam financeiro, estoque e fiscal.',
+      ],
+      actions: [
+        { page: 'caixa', title: 'Conferir caixa', hint: 'Validar recebimentos' },
+        { page: 'nf', title: 'Ir para fiscal', hint: 'Gerar documento da venda' },
+      ],
+    },
+    estoque: {
+      description: 'Controle entrada, saída e risco de ruptura por unidade.',
+      tips: [
+        'Ajuste quantidades com base em contagem real ou nota de entrada.',
+        'Itens baixos devem virar reposição ou pedido de compra.',
+        'Estoque bem alimentado melhora CMV, financeiro e operação.',
+      ],
+      actions: [
+        { page: 'restock', title: 'Pedir reposição', hint: 'Abrir pedido de compra' },
+        { page: 'produtos', title: 'Revisar produtos', hint: 'Conferir cadastro e ativação' },
+      ],
+    },
+    caixa: {
+      description: 'Abra, acompanhe e feche o caixa da unidade sem misturar dados entre lojas.',
+      tips: [
+        'Registre reforços, sangrias e fechamento no mesmo dia.',
+        'Diferença de caixa deve ser tratada antes de encerrar o turno.',
+        'O caixa alimenta o financeiro e o resultado da unidade.',
+      ],
+      actions: [
+        { page: 'financeiro', title: 'Ver financeiro', hint: 'Cruzar com resultado do dia' },
+        { page: 'pedidos', title: 'Voltar para pedidos', hint: 'Comparar vendas e recebimentos' },
+      ],
+    },
+    financeiro: {
+      description: 'Acompanhe custos, DRE, venda mínima e saúde financeira da loja.',
+      tips: [
+        'Cadastre primeiro os custos fixos e variáveis do mês.',
+        'Use uma loja específica para preencher a unidade corretamente.',
+        'Quanto melhor os dados, mais confiável fica o score.',
+      ],
+      actions: [
+        { page: 'nf', title: 'Abrir fiscal', hint: 'Completar dados da unidade' },
+        { page: 'dashboard', title: 'Voltar ao painel', hint: 'Ver impacto nos indicadores' },
+      ],
+    },
+    nf: {
+      description: 'Central fiscal da unidade com configuração, certificado e emissão operacional.',
+      tips: [
+        'Use o auto preenchimento da loja para reduzir trabalho manual.',
+        'Complete CSC, certificado e checklist antes de testar NFC-e.',
+        'Comece em homologação e só depois avance para produção.',
+      ],
+      actions: [
+        { page: 'pedidos', title: 'Buscar venda', hint: 'Selecionar pedido para documento' },
+        { page: 'lojas', title: 'Revisar loja', hint: 'Ajustar cadastro base da unidade' },
+      ],
+    },
+    produtos: {
+      description: 'Gerencie o catálogo que alimenta vendas, estoque e fiscal.',
+      tips: [
+        'Cadastre nome, preço, custo e categoria com clareza.',
+        'Ative apenas os itens liberados para a loja atual.',
+        'Para pessoa leiga, o cadastro rápido com IA é o caminho mais simples.',
+      ],
+      actions: [
+        { href: '/admin/cadastro-produto', title: 'Cadastro rápido com IA', hint: 'Cadastrar produto sem complicação' },
+        { page: 'estoque', title: 'Ver estoque', hint: 'Conferir saldo por unidade' },
+      ],
+    },
+    lojas: {
+      description: 'Cada loja bem cadastrada reduz suporte e melhora o resto do sistema inteiro.',
+      tips: [
+        'Preencha CNPJ, endereço, cidade, telefone e horários com cuidado.',
+        'Esses dados alimentam seletor, fiscal e visão do franqueado.',
+        'Quanto melhor o cadastro da loja, menos retrabalho depois.',
+      ],
+      actions: [
+        { page: 'nf', title: 'Abrir fiscal da loja', hint: 'Completar dados da NFC-e' },
+        { page: 'funcionarios', title: 'Vincular equipe', hint: 'Separar acessos por unidade' },
+      ],
+    },
+  };
+
   // DOM references (populated on init)
   let els = {};
 
@@ -49,6 +148,19 @@ const AdminApp = (() => {
       headerDatetime: document.getElementById('header-datetime'),
       syncBanner: document.getElementById('sync-banner'),
       syncPendingCount: document.getElementById('sync-pending-count'),
+      contextPanel: document.getElementById('admin-context'),
+      contextScope: document.getElementById('admin-context-scope'),
+      contextTitle: document.getElementById('admin-context-title'),
+      contextDescription: document.getElementById('admin-context-description'),
+      contextTips: document.getElementById('admin-context-tips'),
+      contextActions: document.getElementById('admin-context-actions'),
+      contextHelp: document.getElementById('admin-context-help'),
+      helpModal: document.getElementById('admin-help-modal'),
+      helpBackdrop: document.getElementById('admin-help-backdrop'),
+      helpClose: document.getElementById('admin-help-close'),
+      helpTitle: document.getElementById('admin-help-title'),
+      helpDescription: document.getElementById('admin-help-description'),
+      helpSteps: document.getElementById('admin-help-steps'),
       adminPages: document.getElementById('admin-pages'),
       pedidosBadge: document.getElementById('pedidos-badge'),
       btnLogout: document.getElementById('btn-logout'),
@@ -84,6 +196,7 @@ const AdminApp = (() => {
 
     // Update order badge
     updatePedidosBadge();
+    renderPageContext(AppState.get('activeAdminPage') || 'dashboard');
   }
 
   /* ------------------------------------------
@@ -204,6 +317,7 @@ const AdminApp = (() => {
     // Update page title
     els.pageTitle.textContent = PAGE_TITLES[page] || page;
     document.title = `${PAGE_TITLES[page] || page} — Admin — Clube do Natural`;
+    renderPageContext(page);
 
     // Close mobile sidebar
     closeSidebar();
@@ -295,6 +409,74 @@ const AdminApp = (() => {
     els.sidebarOverlay.hidden = true;
   }
 
+  function getCurrentScopeLabel() {
+    const user = AppState.get('user');
+    const selectedStoreId = els.storeSelector ? els.storeSelector.value : 'todas';
+    const sourceStores = Array.isArray(window.DataStores) ? window.DataStores : [];
+    const selectedStore = sourceStores.find(store => store.id === selectedStoreId);
+
+    if (user && user.cargo === 'dono' && selectedStoreId === 'todas') {
+      return 'Visão da rede inteira';
+    }
+    if (selectedStore) {
+      return `Loja atual: ${selectedStore.nome.split(' - ')[1] || selectedStore.nome}`;
+    }
+    return 'Visão operacional';
+  }
+
+  function renderPageContext(page) {
+    if (!els.contextPanel) return;
+    const meta = PAGE_META[page] || {
+      description: 'Use esta área para acompanhar a operação da unidade com mais clareza.',
+      tips: [
+        'Revise os dados principais da tela antes de fazer mudanças.',
+        'Use o seletor de loja para trabalhar na unidade correta.',
+        'Se algo parecer fora do lugar, valide pedidos, estoque, caixa e financeiro.',
+      ],
+      actions: [{ page: 'dashboard', title: 'Voltar ao dashboard', hint: 'Retomar a visão geral' }],
+    };
+
+    els.contextPanel.hidden = false;
+    els.contextScope.textContent = getCurrentScopeLabel();
+    els.contextTitle.textContent = PAGE_TITLES[page] || 'Painel administrativo';
+    els.contextDescription.textContent = meta.description;
+    els.contextTips.innerHTML = (meta.tips || []).map(tip => `<li>${tip}</li>`).join('');
+    els.contextActions.innerHTML = (meta.actions || []).map(action => `
+      <button class="admin-context__action" type="button" ${action.page ? `data-nav-page="${action.page}"` : ''} ${action.href ? `data-nav-href="${action.href}"` : ''}>
+        <strong>${action.title}</strong>
+        <span>${action.hint || ''}</span>
+      </button>
+    `).join('');
+
+    els.contextActions.querySelectorAll('.admin-context__action').forEach(button => {
+      button.addEventListener('click', () => {
+        const href = button.dataset.navHref;
+        const navPage = button.dataset.navPage;
+        if (href) {
+          window.location.href = href;
+          return;
+        }
+        if (navPage) navigateTo(navPage);
+      });
+    });
+
+    if (els.contextHelp) {
+      els.contextHelp.onclick = () => openHelpModal(page, meta);
+    }
+  }
+
+  function openHelpModal(page, meta) {
+    if (!els.helpModal) return;
+    els.helpTitle.textContent = `Como usar ${PAGE_TITLES[page] || 'esta tela'}`;
+    els.helpDescription.textContent = meta.description || '';
+    els.helpSteps.innerHTML = (meta.tips || []).map(step => `<li>${step}</li>`).join('');
+    els.helpModal.hidden = false;
+  }
+
+  function closeHelpModal() {
+    if (els.helpModal) els.helpModal.hidden = true;
+  }
+
   /* ------------------------------------------
      CONNECTION STATUS
   ------------------------------------------ */
@@ -353,6 +535,7 @@ const AdminApp = (() => {
   ------------------------------------------ */
   function onStoreChange() {
     const activePage = AppState.get('activeAdminPage') || 'dashboard';
+    renderPageContext(activePage);
     triggerPageRender(activePage);
   }
 
@@ -415,9 +598,15 @@ const AdminApp = (() => {
     // Store selector change
     els.storeSelector.addEventListener('change', onStoreChange);
 
+    if (els.helpClose) els.helpClose.addEventListener('click', closeHelpModal);
+    if (els.helpBackdrop) els.helpBackdrop.addEventListener('click', closeHelpModal);
+
     // Keyboard: Escape closes sidebar
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeSidebar();
+      if (e.key === 'Escape') {
+        closeSidebar();
+        closeHelpModal();
+      }
     });
 
     // Listen for storage changes (other tabs)

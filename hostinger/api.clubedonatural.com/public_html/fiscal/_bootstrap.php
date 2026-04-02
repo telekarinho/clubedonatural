@@ -167,6 +167,57 @@ function authorize_store_upload(string $idToken, string $storeId): array
     ];
 }
 
+function get_authenticated_user(string $idToken): array
+{
+    $tokenData = validate_id_token($idToken);
+    $userDoc = firestore_get_document('users/' . $tokenData['uid'], $idToken);
+
+    if (!$userDoc) {
+        json_response(403, ['ok' => false, 'error' => 'Nao foi possivel carregar as permissoes do usuario.']);
+    }
+
+    $role = (string) ($userDoc['role'] ?? '');
+    $approved = (bool) ($userDoc['approved'] ?? false);
+    $userStoreId = (string) ($userDoc['storeId'] ?? '');
+
+    if (!$approved) {
+        json_response(403, ['ok' => false, 'error' => 'Usuario ainda nao aprovado para operar no painel.']);
+    }
+
+    return [
+        'uid' => $tokenData['uid'],
+        'email' => $tokenData['email'],
+        'role' => $role,
+        'storeId' => $userStoreId,
+        'displayName' => (string) ($userDoc['displayName'] ?? $tokenData['email']),
+    ];
+}
+
+function authorize_backup_scope(string $idToken, string $scope, ?string $storeId = null): array
+{
+    $auth = get_authenticated_user($idToken);
+
+    if ($scope === 'global') {
+        if ($auth['role'] !== 'dono') {
+            json_response(403, ['ok' => false, 'error' => 'Apenas o admin geral pode espelhar dados globais.']);
+        }
+        return $auth;
+    }
+
+    if ($scope === 'store') {
+        if (!$storeId) {
+            json_response(422, ['ok' => false, 'error' => 'storeId obrigatorio para backup por loja.']);
+        }
+        $canManage = $auth['role'] === 'dono' || ($auth['role'] === 'gerente' && $auth['storeId'] === $storeId);
+        if (!$canManage) {
+            json_response(403, ['ok' => false, 'error' => 'Usuario sem permissao para espelhar dados desta loja.']);
+        }
+        return $auth;
+    }
+
+    json_response(422, ['ok' => false, 'error' => 'Escopo de backup invalido.']);
+}
+
 function storage_base_path(): string
 {
     $base = dirname(__DIR__, 2) . '/private_storage/fiscal-certificados';

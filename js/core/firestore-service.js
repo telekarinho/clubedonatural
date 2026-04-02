@@ -25,6 +25,15 @@ const FirestoreService = (() => {
     }
     db = CdnFirebase.db;
     _ready = true;
+    if (typeof window !== 'undefined' && !window.__cdnHostingerBackupListener) {
+      window.addEventListener('online', () => {
+        flushHostingerBackupQueue().catch(error => {
+          console.warn('[FirestoreService] Falha ao sincronizar fila de backup Hostinger:', error.message);
+        });
+      });
+      window.__cdnHostingerBackupListener = true;
+    }
+    flushHostingerBackupQueue().catch(() => {});
     console.log('[FirestoreService] Initialized');
     return true;
   }
@@ -130,6 +139,165 @@ const FirestoreService = (() => {
     }
   }
 
+  const HOSTINGER_BACKUP_ENDPOINT = 'https://api.clubedonatural.com/backup/sync.php';
+  const HOSTINGER_BACKUP_QUEUE_KEY = 'hostinger_backup_queue_v1';
+
+  function queueBackupPayload(payload) {
+    try {
+      const queue = Storage.get(HOSTINGER_BACKUP_QUEUE_KEY) || [];
+      queue.push(payload);
+      Storage.set(HOSTINGER_BACKUP_QUEUE_KEY, queue.slice(-500));
+    } catch (error) {
+      console.warn('[FirestoreService] Falha ao enfileirar backup Hostinger:', error.message);
+    }
+  }
+
+  function readBackupQueue() {
+    try {
+      const queue = Storage.get(HOSTINGER_BACKUP_QUEUE_KEY) || [];
+      return Array.isArray(queue) ? queue : [];
+    } catch (error) {
+      console.warn('[FirestoreService] Falha ao ler fila de backup Hostinger:', error.message);
+      return [];
+    }
+  }
+
+  function writeBackupQueue(queue) {
+    try {
+      Storage.set(HOSTINGER_BACKUP_QUEUE_KEY, Array.isArray(queue) ? queue : []);
+    } catch (error) {
+      console.warn('[FirestoreService] Falha ao salvar fila de backup Hostinger:', error.message);
+    }
+  }
+
+  function serializeBackupValue(value) {
+    if (value == null) return value;
+    if (value instanceof Date) return value.toISOString();
+    if (Array.isArray(value)) return value.map(serializeBackupValue);
+    if (typeof value === 'object') {
+      if (typeof value.toDate === 'function') {
+        try {
+          return value.toDate().toISOString();
+        } catch (error) {
+          return new Date().toISOString();
+        }
+      }
+      const ctorName = value.constructor && value.constructor.name ? value.constructor.name : '';
+      if (ctorName === 'FieldValue' || value._methodName === 'FieldValue.serverTimestamp') {
+        return new Date().toISOString();
+      }
+      const result = {};
+      Object.entries(value).forEach(([key, nested]) => {
+        if (typeof nested !== 'function') {
+          result[key] = serializeBackupValue(nested);
+        }
+      });
+      return result;
+    }
+    return value;
+  }
+
+  async function getFirebaseIdToken() {
+    if (!(CdnFirebase && CdnFirebase.auth && CdnFirebase.auth.currentUser)) {
+      throw new Error('Sessao Firebase indisponivel para backup Hostinger');
+    }
+    return CdnFirebase.auth.currentUser.getIdToken();
+  }
+
+  async function pushBackupPayload(payload) {
+    const idToken = await getFirebaseIdToken();
+    const response = await fetch(HOSTINGER_BACKUP_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    let body = null;
+    try {
+      body = await response.json();
+    } catch (error) {
+      throw new Error('Resposta invalida do backup Hostinger');
+    }
+
+    if (!response.ok || !body || body.ok !== true) {
+      throw new Error(body && body.error ? body.error : 'Falha ao espelhar dados na Hostinger');
+    }
+
+    return body;
+  }
+
+  async function mirrorToHostinger(entry) {
+    const payload = {
+      ...entry,
+      data: entry.operation === 'delete' ? null : serializeBackupValue(entry.data),
+      queuedAt: new Date().toISOString(),
+      source: 'firebase-client',
+      actor: {
+        uid: currentUserId(),
+        nome: currentUserName(),
+        role: currentUserRole(),
+        storeId: currentUserStoreId(),
+      },
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      queueBackupPayload(payload);
+      return false;
+    }
+
+    try {
+      await pushBackupPayload(payload);
+      return true;
+    } catch (error) {
+      console.warn('[FirestoreService] Backup Hostinger pendente:', error.message);
+      queueBackupPayload(payload);
+      return false;
+    }
+  }
+
+  async function flushHostingerBackupQueue() {
+    const queue = readBackupQueue();
+    if (!queue.length) return 0;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 0;
+
+    const remaining = [];
+    let synced = 0;
+    for (const payload of queue) {
+      try {
+        await pushBackupPayload(payload);
+        synced += 1;
+      } catch (error) {
+        remaining.push(payload);
+      }
+    }
+    writeBackupQueue(remaining);
+    return synced;
+  }
+
+  function mirrorStoreWrite(collection, storeId, docId, data, operation = 'upsert') {
+    return mirrorToHostinger({
+      scope: 'store',
+      collection,
+      storeId,
+      docId,
+      operation,
+      data,
+    });
+  }
+
+  function mirrorGlobalWrite(collection, docId, data, operation = 'upsert') {
+    return mirrorToHostinger({
+      scope: 'global',
+      collection,
+      docId,
+      operation,
+      data,
+    });
+  }
+
   async function getAllowedStores() {
     const allStores = await ensureDb().collection('lojas').get();
     const mapped = allStores.docs.map(docToObj);
@@ -164,11 +332,13 @@ const FirestoreService = (() => {
       });
       delete data._id;
       await d.collection('produtos').doc(id).set(data, { merge: true });
+      mirrorGlobalWrite('produtos', id, data);
       return id;
     },
 
     async delete(id) {
       await ensureDb().collection('produtos').doc(id).delete();
+      mirrorGlobalWrite('produtos', id, null, 'delete');
     },
 
     onSnapshot(callback) {
@@ -206,11 +376,13 @@ const FirestoreService = (() => {
       });
       delete data._id;
       await d.collection('lojas').doc(id).set(data, { merge: true });
+      mirrorGlobalWrite('lojas', id, data);
       return id;
     },
 
     async delete(id) {
       await ensureDb().collection('lojas').doc(id).delete();
+      mirrorGlobalWrite('lojas', id, null, 'delete');
     },
 
     onSnapshot(callback) {
@@ -246,14 +418,17 @@ const FirestoreService = (() => {
         .collection('lojas').doc(storeId)
         .collection('produtos_ativos').doc(productId);
       if (active) {
-        await ref.set(cleanUndefined({
+        const data = cleanUndefined({
           ativo: true,
           productId,
           updatedAt: timestamp(),
           ...extraData,
-        }), { merge: true });
+        });
+        await ref.set(data, { merge: true });
+        mirrorStoreWrite('produtos_ativos', storeId, productId, data);
       } else {
         await ref.delete();
+        mirrorStoreWrite('produtos_ativos', storeId, productId, null, 'delete');
       }
     },
 
@@ -317,6 +492,7 @@ const FirestoreService = (() => {
         .collection('lojas').doc(storeId)
         .collection('estoque').doc(productId)
         .set(data, { merge: true });
+      mirrorStoreWrite('estoque', storeId, productId, data);
     },
 
     async getAllStores(productId) {
@@ -363,6 +539,7 @@ const FirestoreService = (() => {
         usuarioId: currentUserId(),
       });
       await ref.set(data);
+      mirrorStoreWrite('movimentacoes', storeId, ref.id, data);
       return ref.id;
     },
 
@@ -442,9 +619,11 @@ const FirestoreService = (() => {
         ensureStoreAccess(employee.loja);
         await d.collection('lojas').doc(employee.loja)
           .collection('funcionarios').doc(id).set(data, { merge: true });
+        mirrorStoreWrite('funcionarios', employee.loja, id, data);
       } else {
         if (!isNetworkAdmin()) throw new Error('Acesso negado para funcionario global');
         await d.collection('funcionarios').doc(id).set(data, { merge: true });
+        mirrorGlobalWrite('funcionarios', id, data);
       }
       return id;
     },
@@ -455,9 +634,11 @@ const FirestoreService = (() => {
         await ensureDb()
           .collection('lojas').doc(storeId)
           .collection('funcionarios').doc(employeeId).delete();
+        mirrorStoreWrite('funcionarios', storeId, employeeId, null, 'delete');
       } else {
         if (!isNetworkAdmin()) throw new Error('Acesso negado para funcionario global');
         await ensureDb().collection('funcionarios').doc(employeeId).delete();
+        mirrorGlobalWrite('funcionarios', employeeId, null, 'delete');
       }
     },
   };
@@ -512,15 +693,18 @@ const FirestoreService = (() => {
       delete data._id;
       await d.collection('lojas').doc(storeId)
         .collection('pedidos').doc(id).set(data, { merge: true });
+      mirrorStoreWrite('pedidos', storeId, id, data);
       return id;
     },
 
     async updateStatus(storeId, orderId, status) {
       ensureStoreAccess(storeId);
+      const patch = { status, updatedAt: timestamp() };
       await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('pedidos').doc(orderId)
-        .update({ status, updatedAt: timestamp() });
+        .update(patch);
+      mirrorStoreWrite('pedidos_status', storeId, orderId, patch);
     },
 
     onSnapshot(storeId, callback) {
@@ -588,6 +772,7 @@ const FirestoreService = (() => {
       delete data._id;
       await d.collection('lojas').doc(storeId)
         .collection('notas_fiscais').doc(id).set(data, { merge: true });
+      mirrorStoreWrite('notas_fiscais', storeId, id, data);
       return id;
     },
   };
@@ -630,6 +815,7 @@ const FirestoreService = (() => {
           .collection('lojas').doc(storeId)
           .collection(collectionName).doc(docId)
           .set(data, { merge: true });
+        mirrorStoreWrite(collectionName, storeId, docId, data);
         return docId;
       },
     };
@@ -696,6 +882,7 @@ const FirestoreService = (() => {
         createdByName: currentUserName(),
       });
       await ref.set(data);
+      mirrorStoreWrite('fiscal_audit_logs', storeId, ref.id, data);
       return ref.id;
     },
 
@@ -731,6 +918,7 @@ const FirestoreService = (() => {
       });
       delete data._id;
       await d.collection('clientes').doc(id).set(data, { merge: true });
+      mirrorGlobalWrite('clientes', id, data);
       return id;
     },
   };
@@ -764,6 +952,8 @@ const FirestoreService = (() => {
       const data = cleanUndefined({ ...sub, id, updatedAt: timestamp() });
       delete data._id;
       await d.collection('assinaturas').doc(id).set(data, { merge: true });
+      if (sub.loja) mirrorStoreWrite('assinaturas', sub.loja, id, data);
+      else mirrorGlobalWrite('assinaturas', id, data);
       return id;
     },
   };
@@ -809,6 +999,7 @@ const FirestoreService = (() => {
       delete data._id;
       await d.collection('lojas').doc(storeId)
         .collection('caixa').doc(id).set(data, { merge: true });
+      mirrorStoreWrite('caixa', storeId, id, data);
       return id;
     },
   };
@@ -855,6 +1046,7 @@ const FirestoreService = (() => {
         delete data._id;
         await d.collection('lojas').doc(storeId)
           .collection(collectionName).doc(id).set(data, { merge: true });
+        mirrorStoreWrite(collectionName, storeId, id, data);
         return id;
       },
 
@@ -863,6 +1055,7 @@ const FirestoreService = (() => {
         await ensureDb()
           .collection('lojas').doc(storeId)
           .collection(collectionName).doc(docId).delete();
+        mirrorStoreWrite(collectionName, storeId, docId, null, 'delete');
       },
     };
   }
@@ -1359,5 +1552,11 @@ const FirestoreService = (() => {
     seedFromMockData,
     cleanup,
     timestamp,
+    HostingerBackup: {
+      flushQueue: flushHostingerBackupQueue,
+      mirrorStoreWrite,
+      mirrorGlobalWrite,
+      getQueueSize: () => readBackupQueue().length,
+    },
   };
 })();

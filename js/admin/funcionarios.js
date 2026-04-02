@@ -29,21 +29,37 @@ const AdminFuncionarios = (() => {
 
   // Auth PERMISSIONS reference
   const PERMISSIONS = {
-    dono: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'nf', 'funcionarios', 'produtos', 'lojas', 'clientes', 'relatorios', 'config'],
-    gerente: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'nf', 'produtos', 'clientes', 'relatorios'],
-    atendente: ['pedidos', 'assinaturas'],
-    caixa: ['pedidos', 'caixa', 'nf'],
-    estoquista: ['estoque', 'produtos'],
+    dono: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'financeiro', 'nf', 'funcionarios', 'produtos', 'lojas', 'clientes', 'relatorios', 'config', 'restock', 'metas', 'afiliados'],
+    gerente: ['dashboard', 'pedidos', 'assinaturas', 'estoque', 'caixa', 'financeiro', 'nf', 'produtos', 'clientes', 'relatorios', 'restock', 'metas', 'afiliados'],
+    atendente: ['pedidos', 'assinaturas', 'metas'],
+    caixa: ['pedidos', 'caixa', 'financeiro', 'nf', 'metas'],
+    estoquista: ['estoque', 'produtos', 'restock', 'metas'],
     motoboy: ['pedidos'],
   };
+
+  let _cachedEmployees = null;
+
+  function useFirestore() {
+    return typeof FirestoreService !== 'undefined' && FirestoreService.ready;
+  }
 
   /* ------------------------------------------
      DATA
   ------------------------------------------ */
+  async function loadEmployees() {
+    if (useFirestore()) {
+      try {
+        _cachedEmployees = await FirestoreService.Employees.getAll();
+        return;
+      } catch (e) {
+        console.warn('[Funcionarios] Firestore load failed:', e.message);
+      }
+    }
+    _cachedEmployees = Storage.get('employees') || [...DataEmployees];
+  }
+
   function getEmployees() {
-    const custom = Storage.get('employees') || null;
-    const base = custom || [...DataEmployees];
-    let list = base;
+    let list = _cachedEmployees || [];
 
     if (currentStoreFilter && currentStoreFilter !== 'todas') {
       list = list.filter(e => e.loja === currentStoreFilter || e.loja === null);
@@ -58,19 +74,37 @@ const AdminFuncionarios = (() => {
       const term = searchTerm.toLowerCase();
       list = list.filter(e =>
         e.nome.toLowerCase().includes(term) ||
-        e.cpf.includes(term) ||
+        (e.cpf && e.cpf.includes(term)) ||
         (e.celular && e.celular.includes(term))
       );
     }
     return list;
   }
 
-  function saveEmployees(list) {
-    Storage.set('employees', list);
+  async function saveEmployee(employee) {
+    if (useFirestore()) {
+      try {
+        await FirestoreService.Employees.save(employee);
+        if (_cachedEmployees) {
+          const idx = _cachedEmployees.findIndex(e => e.id === employee.id);
+          if (idx !== -1) _cachedEmployees[idx] = employee;
+          else _cachedEmployees.push(employee);
+        }
+        return;
+      } catch (e) {
+        console.warn('[Funcionarios] Firestore save failed:', e.message);
+      }
+    }
+    const all = getAllEmployees();
+    const idx = all.findIndex(e => e.id === employee.id);
+    if (idx !== -1) all[idx] = employee;
+    else all.push(employee);
+    Storage.set('employees', all);
+    _cachedEmployees = all;
   }
 
   function getAllEmployees() {
-    return Storage.get('employees') || [...DataEmployees];
+    return _cachedEmployees || [];
   }
 
   function getStoreLabel(lojaId) {
@@ -105,11 +139,13 @@ const AdminFuncionarios = (() => {
   /* ------------------------------------------
      RENDER
   ------------------------------------------ */
-  function render(storeFilter) {
+  async function render(storeFilter) {
     const el = container();
     if (!el) return;
 
     currentStoreFilter = storeFilter || 'todas';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">Carregando funcionários...</div>';
+    await loadEmployees();
     const employees = getEmployees();
 
     el.innerHTML = `
@@ -262,14 +298,14 @@ const AdminFuncionarios = (() => {
   /* ------------------------------------------
      TOGGLE STATUS
   ------------------------------------------ */
-  function toggleEmployeeStatus(id) {
+  async function toggleEmployeeStatus(id) {
     const all = getAllEmployees();
-    const idx = all.findIndex(e => e.id === id);
-    if (idx === -1) return;
+    const emp = all.find(e => e.id === id);
+    if (!emp) return;
 
-    all[idx].status = all[idx].status === 'ativo' ? 'inativo' : 'ativo';
-    saveEmployees(all);
-    Toast.success(`Funcionário ${all[idx].status === 'ativo' ? 'ativado' : 'desativado'}`);
+    emp.status = emp.status === 'ativo' ? 'inativo' : 'ativo';
+    await saveEmployee(emp);
+    Toast.success(`Funcionário ${emp.status === 'ativo' ? 'ativado' : 'desativado'}`);
     render(currentStoreFilter);
   }
 
@@ -341,7 +377,7 @@ const AdminFuncionarios = (() => {
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;color:#333;">Salário (R$)</label>
-              <input type="text" name="salario" value="${employee ? employee.salario.toFixed(2) : '0.00'}" placeholder="0.00"
+              <input type="text" name="salario" value="${employee && employee.salario ? employee.salario.toFixed(2) : '0.00'}" placeholder="0.00"
                 style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;">
             </div>
             <div>
@@ -396,7 +432,7 @@ const AdminFuncionarios = (() => {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
     // Submit
-    modal.querySelector('.func-form').addEventListener('submit', (e) => {
+    modal.querySelector('.func-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
       const data = {
@@ -413,14 +449,7 @@ const AdminFuncionarios = (() => {
         status: employee ? employee.status : 'ativo',
       };
 
-      const allEmps = getAllEmployees();
-      if (isEdit) {
-        const idx = allEmps.findIndex(emp => emp.id === data.id);
-        if (idx !== -1) allEmps[idx] = data;
-      } else {
-        allEmps.push(data);
-      }
-      saveEmployees(allEmps);
+      await saveEmployee(data);
       close();
       Toast.success(isEdit ? 'Funcionário atualizado!' : 'Funcionário criado!');
       render(currentStoreFilter);

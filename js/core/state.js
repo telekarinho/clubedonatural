@@ -41,6 +41,7 @@ const AppState = (() => {
 
     // Admin
     activeAdminPage: 'dashboard',
+    userStoreId: null,
 
     // UI
     loading: false,
@@ -172,8 +173,31 @@ const AppState = (() => {
       const savedUser = Storage.get('user');
       if (savedUser) {
         reactiveState.user = savedUser;
+        reactiveState.userStoreId = savedUser.storeId || reactiveState.userStoreId || null;
         reactiveState.isAdmin = ['dono', 'gerente', 'caixa', 'atendente', 'estoquista'].includes(savedUser.cargo);
       }
+    },
+
+    getUserStoreId() {
+      return reactiveState.userStoreId || (reactiveState.user && reactiveState.user.storeId) || null;
+    },
+
+    isNetworkAdmin() {
+      return !!reactiveState.user && reactiveState.user.cargo === 'dono';
+    },
+
+    getAccessibleStoreIds() {
+      if (this.isNetworkAdmin()) {
+        return Array.isArray(window.DataStores) ? window.DataStores.map(store => store.id) : [];
+      }
+      const storeId = this.getUserStoreId();
+      return storeId ? [storeId] : [];
+    },
+
+    canAccessStore(storeId) {
+      if (!storeId || storeId === 'todas') return this.isNetworkAdmin();
+      if (this.isNetworkAdmin()) return true;
+      return this.getUserStoreId() === storeId;
     },
   };
 })();

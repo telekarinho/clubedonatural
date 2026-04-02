@@ -10,12 +10,28 @@
 <meta name="theme-color" content="#1B4332">
 <link rel="manifest" href="manifest-pdv.json">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🌿</text></svg>">
+<!-- Force clear old SW cache -->
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){r.unregister()});
+  });
+  caches.keys().then(function(keys){
+    keys.forEach(function(k){if(k.startsWith('pdv-'))caches.delete(k)});
+  });
+}
+</script>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../js/core/firebase-config.js"></script>
 <script src="../js/core/firebase-auth.js"></script>
+<script src="../js/core/storage.js"></script>
+<script src="../js/data/stores.js"></script>
+<script src="../js/data/employees.js"></script>
+<script src="../js/core/firestore-service.js"></script>
+<script src="../js/admin/metas-extra.js"></script>
 <script>CdnAuth.guard({
   requireApproval: true,
   allowedRoles: ['dono','gerente','caixa','atendente'],
@@ -24,7 +40,8 @@
     window._firebaseUser = {
       nome: userData.displayName || CdnAuth.currentUser.displayName || CdnAuth.currentUser.email,
       cargo: userData.role || 'atendente',
-      email: CdnAuth.currentUser.email
+      email: CdnAuth.currentUser.email,
+      storeId: userData.storeId || null
     };
   }
 });</script>
@@ -85,7 +102,7 @@ input{font-family:inherit;outline:none}
 .login-hint{font-size:.75rem;color:var(--text-light);margin-top:20px;line-height:1.5}
 
 /* ===== MAIN LAYOUT ===== */
-#posApp{display:none;height:100vh;grid-template-rows:var(--topbar-h) 1fr;grid-template-columns:1fr 380px}
+#posApp{display:none;height:100vh;grid-template-rows:var(--topbar-h) 1fr;grid-template-columns:65% 35%}
 #posApp.active{display:grid}
 
 /* TOP BAR */
@@ -150,23 +167,23 @@ input{font-family:inherit;outline:none}
 .cat-pill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
 /* Product Grid */
-.products-grid-wrap{flex:1;overflow-y:auto;padding:12px 16px}
+.products-grid-wrap{flex:1;overflow-y:auto;padding:10px 16px}
 .products-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;
 }
 .product-card{
-  background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);
-  padding:16px 14px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;
-  min-height:110px;position:relative;
+  background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-lg);
+  padding:12px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;
+  min-height:90px;position:relative;
 }
 .product-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(45,106,79,.12);transform:translateY(-1px)}
 .product-card:active{transform:scale(.97)}
-.product-card .cat-icon{font-size:1.5rem;margin-bottom:6px}
-.product-card .p-img{width:100%;height:80px;object-fit:contain;border-radius:4px;margin-bottom:6px;background:#f9f9f9}
-.product-card .p-name{font-size:.85rem;font-weight:600;line-height:1.3;margin-bottom:auto;color:var(--text)}
-.product-card .p-price{font-size:1.05rem;font-weight:700;color:var(--primary);margin-top:8px}
-.product-card .p-variations{font-size:.7rem;color:var(--text-light);margin-top:2px}
-.product-card .p-barcode{font-size:.65rem;color:var(--text-light);font-family:monospace;margin-top:2px}
+.product-card .cat-icon{font-size:1.3rem;margin-bottom:4px}
+.product-card .p-img{width:100%;height:56px;object-fit:contain;border-radius:4px;margin-bottom:4px;background:#f9f9f9}
+.product-card .p-name{font-size:.8rem;font-weight:600;line-height:1.25;margin-bottom:auto;color:var(--text)}
+.product-card .p-price{font-size:.95rem;font-weight:700;color:var(--primary);margin-top:6px}
+.product-card .p-variations{font-size:.65rem;color:var(--text-light);margin-top:2px}
+.product-card .p-barcode{font-size:.6rem;color:var(--text-light);font-family:monospace;margin-top:2px}
 .no-products{text-align:center;color:var(--text-light);padding:40px;font-size:.95rem}
 
 /* ===== CART PANEL (RIGHT) ===== */
@@ -175,8 +192,8 @@ input{font-family:inherit;outline:none}
   display:flex;flex-direction:column;overflow:hidden;
 }
 .cart-header{
-  padding:12px 16px;border-bottom:1px solid var(--border-light);
-  font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-bottom:1px solid var(--border-light);
+  font-weight:700;font-size:.88rem;display:flex;align-items:center;gap:8px;
   background:var(--surface-alt);
 }
 .cart-header .cart-count{
@@ -184,24 +201,24 @@ input{font-family:inherit;outline:none}
   border-radius:10px;font-weight:600;
 }
 .cart-customer{
-  padding:10px 16px;border-bottom:1px solid var(--border-light);
+  padding:6px 12px;border-bottom:1px solid var(--border-light);
 }
 .cart-customer input{
-  width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);
-  font-size:.85rem;
+  width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);
+  font-size:.8rem;
 }
 .cart-customer input:focus{border-color:var(--primary)}
 .cart-items{flex:1;overflow-y:auto;padding:8px 0}
 .cart-empty{text-align:center;color:var(--text-light);padding:40px 20px;font-size:.9rem}
 .cart-item{
-  padding:10px 16px;border-bottom:1px solid var(--border-light);
-  display:flex;flex-direction:column;gap:6px;transition:background .15s;
+  padding:6px 12px;border-bottom:1px solid var(--border-light);
+  display:flex;flex-direction:column;gap:4px;transition:background .15s;
 }
 .cart-item:hover{background:var(--surface-alt)}
 .cart-item-top{display:flex;align-items:flex-start;gap:8px}
 .cart-item-info{flex:1;min-width:0}
-.cart-item-name{font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cart-item-variation{font-size:.72rem;color:var(--text-light)}
+.cart-item-name{font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cart-item-variation{font-size:.68rem;color:var(--text-light)}
 .cart-item-remove{
   background:none;color:var(--text-light);font-size:1.1rem;padding:2px;
   transition:color .2s;flex-shrink:0;
@@ -226,10 +243,10 @@ input{font-family:inherit;outline:none}
 
 /* Cart Footer */
 .cart-footer{border-top:2px solid var(--border);background:var(--surface-alt)}
-.cart-totals{padding:12px 16px}
-.cart-totals-row{display:flex;justify-content:space-between;font-size:.88rem;margin-bottom:6px}
+.cart-totals{padding:8px 12px}
+.cart-totals-row{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px}
 .cart-totals-row.subtotal{color:var(--text-secondary)}
-.cart-totals-row.total{font-size:1.2rem;font-weight:700;color:var(--primary);margin:8px 0 0}
+.cart-totals-row.total{font-size:1.05rem;font-weight:700;color:var(--primary);margin:4px 0 0}
 .discount-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .discount-row label{font-size:.8rem;color:var(--text-secondary);white-space:nowrap}
 .discount-row input{
@@ -242,17 +259,20 @@ input{font-family:inherit;outline:none}
 }
 
 /* Payment Section */
-.payment-section{padding:10px 16px;border-top:1px solid var(--border-light)}
-.payment-label{font-size:.78rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.payment-methods{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.payment-section{padding:4px 12px;border-top:1px solid var(--border-light)}
+.payment-label{font-size:.7rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.payment-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:6px}
 .pay-btn{
-  padding:10px 8px;border-radius:var(--radius);font-size:.78rem;font-weight:600;
-  background:var(--surface);border:2px solid var(--border);color:var(--text);
-  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px;
+  padding:7px 6px;border-radius:var(--radius);font-size:.72rem;font-weight:600;
+  background:var(--surface);border:1.5px solid var(--border);color:var(--text);
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:3px;
 }
 .pay-btn:hover{border-color:var(--primary)}
 .pay-btn.selected{background:var(--primary);color:#fff;border-color:var(--primary)}
 .pay-btn .pay-icon{font-size:1rem}
+.pay-btn--subscription{border-color:#10B981;background:#f0fdf4;position:relative}
+.pay-btn--subscription:hover{border-color:#059669;background:#dcfce7}
+.pay-btn--subscription.selected{background:#059669;color:#fff;border-color:#059669}
 
 /* Cash Input */
 .cash-input-area{margin-bottom:8px;display:none}
@@ -271,19 +291,19 @@ input{font-family:inherit;outline:none}
 .cash-change.negative{background:var(--danger)}
 
 /* Action Buttons */
-.cart-actions{padding:10px 16px 16px;display:flex;flex-direction:column;gap:8px}
+.cart-actions{padding:6px 12px 10px;display:flex;flex-direction:column;gap:4px}
 .btn-finalize{
-  padding:16px;background:var(--primary);color:#fff;font-size:1.05rem;font-weight:700;
+  padding:10px;background:var(--primary);color:#fff;font-size:.9rem;font-weight:700;
   border-radius:var(--radius);transition:all .2s;display:flex;align-items:center;
-  justify-content:center;gap:8px;
+  justify-content:center;gap:6px;
 }
 .btn-finalize:hover:not(:disabled){background:var(--primary-dark)}
 .btn-finalize:disabled{opacity:.4;cursor:not-allowed}
-.btn-finalize .kbd{font-size:.65rem;opacity:.7;background:rgba(255,255,255,.2);padding:2px 6px;border-radius:3px}
+.btn-finalize .kbd{font-size:.6rem;opacity:.7;background:rgba(255,255,255,.2);padding:2px 5px;border-radius:3px}
 .btn-cancel{
-  padding:12px;background:none;color:var(--danger);font-size:.88rem;font-weight:600;
+  padding:8px;background:none;color:var(--danger);font-size:.78rem;font-weight:600;
   border-radius:var(--radius);border:1px solid var(--danger);transition:all .2s;
-  display:flex;align-items:center;justify-content:center;gap:6px;
+  display:flex;align-items:center;justify-content:center;gap:4px;
 }
 .btn-cancel:hover{background:var(--danger);color:#fff}
 .btn-cancel .kbd{font-size:.65rem;opacity:.6;background:rgba(0,0,0,.08);padding:2px 6px;border-radius:3px}
@@ -470,7 +490,7 @@ input{font-family:inherit;outline:none}
   background:linear-gradient(135deg,#1B4332 0%,#2D6A4F 100%);
   padding:10px 12px 8px;display:flex;align-items:center;justify-content:center;gap:6px;
 }
-.label-header .label-logo{width:24px;height:24px;object-fit:contain;filter:brightness(10)}
+.label-header .label-logo{width:24px;height:24px;object-fit:contain}
 .label-header .label-brand{color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
 .label-header .label-brand span{color:#C4972A}
 .label-body{padding:10px 14px 12px}
@@ -603,6 +623,8 @@ input{font-family:inherit;outline:none}
   .topbar-status span:not(.dot){display:none}
   .topbar-sync span{display:none}
 }
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
 </style>
 </head>
 <body>
@@ -631,9 +653,12 @@ input{font-family:inherit;outline:none}
     </div>
     <div class="topbar-clock" id="clock">00:00:00</div>
     <div class="topbar-divider"></div>
+    <a class="topbar-btn" href="/catalogo.html" target="_blank" title="Abrir catálogo online da loja"><span class="icon">🛒</span> Catálogo</a>
     <button class="topbar-btn" onclick="openCaixa()" title="Caixa (Abertura/Fechamento)"><span class="icon">💰</span> Caixa</button>
     <button class="topbar-btn" onclick="openHistory()" title="Histórico de Vendas"><span class="icon">📋</span> Vendas</button>
     <button class="topbar-btn" onclick="openLabelPrinter()" title="Imprimir Etiquetas"><span class="icon">🏷️</span> Etiquetas</button>
+    <button class="topbar-btn" onclick="openSubscriptionModal()" title="Cadastrar Assinatura Rápida"><span class="icon">🔄</span> Assinatura</button>
+    <button class="topbar-btn" onclick="toggleGamification()" title="Tarefas & Metas" id="btnGamification"><span class="icon">🎯</span> Metas</button>
     <button class="topbar-btn" onclick="doLogout()" title="Sair do sistema"><span class="icon">🚪</span> Sair</button>
   </div>
 
@@ -685,6 +710,12 @@ input{font-family:inherit;outline:none}
           <span id="totalValue">R$ 0,00</span>
         </div>
       </div>
+      <!-- Subscription CTA Banner -->
+      <div id="subCtaBanner" style="display:none;margin:0 16px 6px;padding:6px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;cursor:pointer;font-size:12px;color:#065f46;" onclick="document.querySelector('[data-method=assinatura]').click()">
+        <span id="subCtaLabel" style="font-weight:700;color:#059669;">🔄</span>
+        <span id="subCtaSavings"></span>
+        <span id="subCtaPrice" style="font-weight:800;color:#059669;float:right;"></span>
+      </div>
       <div class="payment-section">
         <div class="payment-label">Forma de Pagamento <span style="font-size:.65rem;opacity:.6">F4</span></div>
         <div class="payment-methods" id="paymentMethods">
@@ -692,6 +723,7 @@ input{font-family:inherit;outline:none}
           <button class="pay-btn" data-method="debito"><span class="pay-icon">💳</span> Débito</button>
           <button class="pay-btn" data-method="credito"><span class="pay-icon">💳</span> Crédito</button>
           <button class="pay-btn" data-method="pix"><span class="pay-icon">📱</span> PIX</button>
+          <button class="pay-btn pay-btn--subscription" data-method="assinatura"><span class="pay-icon">🔄</span> Assinatura<span id="paySubLabel" style="display:block;font-size:9px;color:#10B981;font-weight:700;margin-top:1px;">OFF</span></button>
         </div>
         <div class="cash-input-area" id="cashInputArea">
           <label>Valor recebido (R$)</label>
@@ -852,6 +884,17 @@ input{font-family:inherit;outline:none}
   </div>
 </div>
 
+<!-- Gamification Panel -->
+<div id="gamificationPanel" style="display:none;position:fixed;right:0;top:56px;bottom:0;width:420px;max-width:100vw;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,0.15);z-index:500;overflow-y:auto;transition:transform .3s;">
+  <div style="padding:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="font-size:1.3rem;color:#1B4332;">🎯 Metas & Tarefas</h2>
+      <button onclick="toggleGamification()" style="background:none;font-size:1.5rem;color:#999;">✕</button>
+    </div>
+    <div id="gamificationContent">Carregando...</div>
+  </div>
+</div>
+
 <!-- ===== TOAST CONTAINER ===== -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -917,7 +960,9 @@ const EMPLOYEES = [
   { nome:'Ana Santos', cargo:'gerente', phone:'(11) 99999-0002', senha:'gerente123' },
 ];
 
-const STORE = { nome:'Clube do Natural - Centro', endereco:'R. das Flores, 123 - Centro', cnpj:'12.345.678/0001-90', tel:'(11) 3456-7890' };
+const DEFAULT_STORE_ID = 'centro';
+let currentStoreId = null;
+let currentStore = null;
 
 const PAYMENT_LABELS = { dinheiro:'Dinheiro', debito:'Cartão Débito', credito:'Cartão Crédito', pix:'PIX' };
 
@@ -1003,9 +1048,46 @@ function fmtDate(d) {
 function today() { return new Date().toISOString().slice(0, 10); }
 function todayCompact() { return today().replace(/-/g, ''); }
 
+function getStoreLabel(store) {
+  if (!store) return 'Loja';
+  return store.nome.split(' - ')[1] || store.nome;
+}
+
+function getRequestedStoreId() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('loja') || localStorage.getItem('pdv_store_id') || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function resolveCurrentStore(user) {
+  const storeId = user?.storeId || getRequestedStoreId() || DEFAULT_STORE_ID;
+  const stores = Array.isArray(window.DataStores) ? window.DataStores : [];
+  const resolved = stores.find(store => store.id === storeId) || stores[0] || null;
+  currentStore = resolved;
+  currentStoreId = resolved ? resolved.id : storeId;
+  try {
+    if (currentStoreId) localStorage.setItem('pdv_store_id', currentStoreId);
+  } catch (e) {}
+  return resolved;
+}
+
+function applyStoreContext() {
+  const store = currentStore || resolveCurrentStore(currentUser);
+  const storeNameEl = document.getElementById('storeName');
+  if (storeNameEl) storeNameEl.textContent = getStoreLabel(store);
+}
+
+function getCaixaKey() {
+  return 'current_' + (currentStoreId || DEFAULT_STORE_ID);
+}
+
 function generateOrderNumber() {
   dailySequence++;
-  return 'CDN' + todayCompact() + String(dailySequence).padStart(4, '0');
+  const prefix = (currentStoreId || DEFAULT_STORE_ID).slice(0, 3).toUpperCase();
+  return prefix + todayCompact() + String(dailySequence).padStart(4, '0');
 }
 
 function toast(msg, type = 'success') {
@@ -1024,6 +1106,13 @@ function updateClock() {
   document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR');
 }
 setInterval(updateClock, 1000);
+
+// Periodic motivation (every 30 min)
+setInterval(function() {
+  if (typeof MetasExtra !== 'undefined' && currentUser) {
+    MetasExtra.checkPeriodicMotivation();
+  }
+}, 30 * 60 * 1000);
 
 // ===== ONLINE/OFFLINE =====
 function updateOnlineStatus() {
@@ -1053,15 +1142,33 @@ window.addEventListener('offline', updateOnlineStatus);
 CdnAuth.onReady(function(userData) {
   var user = window._firebaseUser || {
     nome: userData.displayName || CdnAuth.currentUser.email,
-    cargo: userData.role || 'atendente'
+    cargo: userData.role || 'atendente',
+    storeId: userData.storeId || null
   };
   currentUser = user;
+  resolveCurrentStore(user);
+  applyStoreContext();
   document.getElementById('posApp').classList.add('active');
   document.getElementById('operatorName').textContent = user.nome + ' (' + user.cargo + ')';
   document.getElementById('searchInput').focus();
   loadCaixaState();
   loadDailySequence();
   toast('Bem-vindo(a), ' + user.nome.split(' ')[0] + '!', 'success');
+  // Show motivational message on login
+  if (typeof MetasExtra !== 'undefined') {
+    var msg = MetasExtra.getLoginMessage();
+    if (msg) {
+      setTimeout(function() {
+        showMotivationModal(msg);
+      }, 1500);
+    }
+    // Auto clock-in GPS
+    MetasExtra.clockIn(user.nome).then(function(result) {
+      if (result && result.success) toast('Ponto registrado! ' + result.store, 'success');
+    }).catch(function() {});
+    // Init daily tasks
+    MetasExtra.initDailyTasks(user.nome);
+  }
 });
 
 function doLogout() {
@@ -1071,6 +1178,67 @@ function doLogout() {
   selectedPayment = null;
   document.getElementById('posApp').classList.remove('active');
   CdnAuth.signOut();
+}
+
+// ===== GAMIFICATION =====
+function toggleGamification() {
+  var panel = document.getElementById('gamificationPanel');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    renderGamification();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function renderGamification() {
+  var el = document.getElementById('gamificationContent');
+  if (!el || typeof MetasExtra === 'undefined') { el.innerHTML = '<p>Módulo não disponível</p>'; return; }
+  var empId = currentUser ? currentUser.nome : 'unknown';
+  var html = '';
+
+  // Motivation banner
+  var duringMsg = MetasExtra.getDuringMessage();
+  if (duringMsg) {
+    html += '<div style="background:linear-gradient(135deg,#E8F5E9,#C8E6C9);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">';
+    html += '<div style="font-size:2rem;">' + duringMsg.icon + '</div>';
+    html += '<div style="font-size:.95rem;color:#1B4332;font-weight:500;margin-top:4px;">' + duringMsg.text + '</div>';
+    html += '</div>';
+  }
+
+  // GPS Attendance
+  html += MetasExtra.renderAttendanceWidget(empId);
+
+  // Daily Tasks
+  html += '<div style="margin-top:16px;">';
+  html += MetasExtra.renderTasksWidget(empId);
+  html += '</div>';
+
+  // Rewards
+  html += '<div style="margin-top:16px;">';
+  html += MetasExtra.renderRewardsWidget(empId);
+  html += '</div>';
+
+  // Points summary
+  html += '<div style="margin-top:16px;padding:16px;background:#F5F5F5;border-radius:12px;text-align:center;">';
+  html += '<div style="font-size:.8rem;color:#666;text-transform:uppercase;">Seus Pontos</div>';
+  var points = MetasExtra.getEmployeePoints ? MetasExtra.getEmployeePoints(empId) : 0;
+  html += '<div style="font-size:2rem;font-weight:700;color:#2D6A4F;">' + (points || 0) + '</div>';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function showMotivationModal(msg) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:40px;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp .4s;">' +
+    '<div style="font-size:4rem;margin-bottom:12px;">' + (msg.icon || '🌿') + '</div>' +
+    '<div style="font-size:1.15rem;color:#1B4332;font-weight:600;line-height:1.5;">' + msg.text + '</div>' +
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="margin-top:24px;padding:12px 32px;background:#2D6A4F;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Vamos lá! 💪</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  setTimeout(function() { if (overlay.parentNode) overlay.remove(); }, 10000);
 }
 
 // ===== CATEGORY PILLS =====
@@ -1110,6 +1278,9 @@ function renderProducts() {
       );
     }
   }
+
+  // Sort: destaques/mais vendidos first
+  prods.sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0));
 
   if (prods.length === 0) {
     grid.innerHTML = '<div class="no-products">Nenhum produto encontrado</div>';
@@ -1332,7 +1503,17 @@ function getDiscount() {
   return Math.min(sub, val);
 }
 
-function getTotal() { return Math.max(0, getSubtotal() - getDiscount()); }
+function getSubDiscountPercent() {
+  try {
+    const s = JSON.parse(localStorage.getItem('cdn_settings') || '{}');
+    return (s.subscriptionDiscount || 15) / 100;
+  } catch(e) { return 0.15; }
+}
+function getSubscriptionDiscount() {
+  if (selectedPayment !== 'assinatura') return 0;
+  return (getSubtotal() - getDiscount()) * getSubDiscountPercent();
+}
+function getTotal() { return Math.max(0, getSubtotal() - getDiscount() - getSubscriptionDiscount()); }
 
 function renderCart() {
   const container = document.getElementById('cartItems');
@@ -1367,8 +1548,49 @@ function renderCart() {
 }
 
 function updateTotals() {
-  document.getElementById('subtotalValue').textContent = fmt(getSubtotal());
-  document.getElementById('totalValue').textContent = fmt(getTotal());
+  const subtotal = getSubtotal();
+  const total = getTotal();
+  document.getElementById('subtotalValue').textContent = fmt(subtotal);
+  document.getElementById('totalValue').textContent = fmt(total);
+
+  // Show subscription discount badge when assinatura is selected
+  let subBanner = document.getElementById('subDiscountBanner');
+  const subDisc = getSubscriptionDiscount();
+  if (subDisc > 0) {
+    if (!subBanner) {
+      subBanner = document.createElement('div');
+      subBanner.id = 'subDiscountBanner';
+      subBanner.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:6px;font-size:13px;';
+      const totalRow = document.querySelector('.cart-totals-row.total');
+      if (totalRow) totalRow.parentNode.insertBefore(subBanner, totalRow);
+    }
+    const pctLabel = Math.round(getSubDiscountPercent() * 100);
+    subBanner.innerHTML = '<span style="color:#10B981;font-weight:600;">🔄 Desconto Assinatura (' + pctLabel + '%)</span><span style="color:#10B981;font-weight:700;">-' + fmt(subDisc) + '</span>';
+    subBanner.style.display = 'flex';
+  } else if (subBanner) {
+    subBanner.style.display = 'none';
+  }
+
+  // Update subscription CTA banner (always visible when cart has items)
+  const ctaBanner = document.getElementById('subCtaBanner');
+  if (ctaBanner) {
+    if (cart.length > 0 && selectedPayment !== 'assinatura') {
+      const discPct = getSubDiscountPercent();
+      const discLabel = Math.round(discPct * 100);
+      const subPrice = subtotal * (1 - discPct);
+      const yearlySavings = (subtotal - subPrice) * 12;
+      ctaBanner.style.display = 'block';
+      document.getElementById('subCtaLabel').textContent = '🔄';
+      document.getElementById('subCtaPrice').textContent = fmt(subPrice);
+      document.getElementById('subCtaSavings').innerHTML =
+        'Assine: <s>' + fmt(subtotal) + '</s> → <strong style="color:#059669">' + fmt(subPrice) + '</strong> (-' + discLabel + '%) · Economia <strong style="color:#059669">' + fmt(yearlySavings) + '/ano</strong>';
+      var paySubLabel = document.getElementById('paySubLabel');
+      if (paySubLabel) paySubLabel.textContent = '-' + discLabel + '%';
+    } else {
+      ctaBanner.style.display = 'none';
+    }
+  }
+
   validateFinalize();
   updateCashChange();
 }
@@ -1393,7 +1615,13 @@ document.getElementById('paymentMethods').addEventListener('click', (e) => {
   } else {
     cashArea.classList.remove('visible');
   }
-  validateFinalize();
+
+  // When subscription selected, open subscription flow with cart items pre-loaded
+  if (method === 'assinatura') {
+    openSubscriptionModal();
+  }
+
+  updateTotals();
 });
 
 function updateCashChange() {
@@ -1442,6 +1670,8 @@ async function finalizeSale() {
     id: orderNumber,
     data: now,
     dataLocal: today(),
+    loja: currentStoreId || DEFAULT_STORE_ID,
+    lojaNome: currentStore ? currentStore.nome : null,
     operador: currentUser.nome,
     cliente: document.getElementById('customerInput').value.trim() || null,
     itens: cart.map(c => ({
@@ -1458,12 +1688,19 @@ async function finalizeSale() {
     formaPagamento: selectedPayment,
     valorRecebido: cashReceived,
     troco: change,
+    origem: 'pdv',
   };
 
-  // Save to IndexedDB
+  let syncedRemotely = false;
   try {
     await dbPut('vendas', sale);
-    await dbPut('syncQueue', { tipo: 'venda', data: sale, createdAt: now });
+    if (typeof FirestoreService !== 'undefined' && FirestoreService.ready && currentStoreId && navigator.onLine) {
+      await FirestoreService.Orders.save(currentStoreId, sale);
+      syncedRemotely = true;
+    }
+    if (!syncedRemotely) {
+      await dbPut('syncQueue', { tipo: 'venda', storeId: currentStoreId || DEFAULT_STORE_ID, data: sale, createdAt: now });
+    }
     updateSyncCount();
   } catch (e) {
     console.error('Error saving sale:', e);
@@ -1487,12 +1724,13 @@ async function finalizeSale() {
 
 // ===== RECEIPT =====
 function showReceipt(sale) {
+  const receiptStore = currentStore || resolveCurrentStore(currentUser);
   const el = document.getElementById('receiptContent');
   el.innerHTML = `
     <div class="receipt-store">
-      <h4>🌿 ${STORE.nome}</h4>
-      <p>${STORE.endereco}</p>
-      <p>CNPJ: ${STORE.cnpj} | Tel: ${STORE.tel}</p>
+      <h4>🌿 ${receiptStore ? receiptStore.nome : 'Clube do Natural'}</h4>
+      <p>${receiptStore ? receiptStore.endereco : ''}</p>
+      <p>CNPJ: ${receiptStore ? receiptStore.cnpj : ''} | Tel: ${receiptStore ? (receiptStore.telefone || receiptStore.tel || '') : ''}</p>
     </div>
     <div class="receipt-meta">
       <span><strong>Pedido:</strong> ${sale.id}</span>
@@ -1576,7 +1814,9 @@ function cancelSale() {
 // ===== SALES HISTORY =====
 async function openHistory() {
   const sales = await dbGetAll('vendas');
-  const todaySales = sales.filter(s => s.dataLocal === today()).sort((a, b) => b.data.localeCompare(a.data));
+  const todaySales = sales
+    .filter(s => s.dataLocal === today() && (s.loja || DEFAULT_STORE_ID) === (currentStoreId || DEFAULT_STORE_ID))
+    .sort((a, b) => b.data.localeCompare(a.data));
 
   renderHistory(todaySales);
   openModal('historyModal');
@@ -1626,15 +1866,17 @@ let _historySalesCache = [];
 async function setHistoryFilter(f) {
   historyFilter = f;
   const sales = await dbGetAll('vendas');
-  const todaySales = sales.filter(s => s.dataLocal === today()).sort((a, b) => b.data.localeCompare(a.data));
+  const todaySales = sales
+    .filter(s => s.dataLocal === today() && (s.loja || DEFAULT_STORE_ID) === (currentStoreId || DEFAULT_STORE_ID))
+    .sort((a, b) => b.data.localeCompare(a.data));
   renderHistory(todaySales);
 }
 
 // ===== CASH REGISTER =====
 async function loadCaixaState() {
   try {
-    const saved = await dbGet('caixa', 'current');
-    if (saved && saved.dataLocal === today()) {
+    const saved = await dbGet('caixa', getCaixaKey());
+    if (saved && saved.dataLocal === today() && (saved.loja || DEFAULT_STORE_ID) === (currentStoreId || DEFAULT_STORE_ID)) {
       caixaState = saved;
     }
   } catch (e) {}
@@ -1642,7 +1884,9 @@ async function loadCaixaState() {
 
 async function saveCaixaState() {
   caixaState.dataLocal = today();
-  caixaState.id = 'current';
+  caixaState.id = getCaixaKey();
+  caixaState.loja = currentStoreId || DEFAULT_STORE_ID;
+  caixaState.lojaNome = currentStore ? currentStore.nome : null;
   try { await dbPut('caixa', caixaState); } catch (e) { console.error(e); }
 }
 
@@ -1670,7 +1914,7 @@ async function renderCaixaModal() {
     `;
   } else {
     const sales = await dbGetAll('vendas');
-    const todaySales = sales.filter(s => s.dataLocal === today());
+    const todaySales = sales.filter(s => s.dataLocal === today() && (s.loja || DEFAULT_STORE_ID) === (currentStoreId || DEFAULT_STORE_ID));
     const cashSales = todaySales.filter(s => s.formaPagamento === 'dinheiro');
     const cashTotal = cashSales.reduce((s, v) => s + v.total, 0);
     const cashTroco = cashSales.reduce((s, v) => s + (v.troco || 0), 0);
@@ -1700,12 +1944,14 @@ async function renderCaixaModal() {
 async function doOpenCaixa() {
   const amount = parseFloat(document.getElementById('caixaOpenAmount').value) || 0;
   caixaState = {
-    id: 'current',
+    id: getCaixaKey(),
     open: true,
     initialAmount: amount,
     openedAt: new Date().toISOString(),
     openedBy: currentUser.nome,
     dataLocal: today(),
+    loja: currentStoreId || DEFAULT_STORE_ID,
+    lojaNome: currentStore ? currentStore.nome : null,
   };
   await saveCaixaState();
   renderCaixaModal();
@@ -1723,7 +1969,10 @@ async function doCloseCaixa(expected) {
   // Save close record to sync queue
   const closeRecord = {
     tipo: 'fechamento_caixa',
+    storeId: currentStoreId || DEFAULT_STORE_ID,
     data: {
+      loja: currentStoreId || DEFAULT_STORE_ID,
+      lojaNome: currentStore ? currentStore.nome : null,
       operador: currentUser.nome,
       abertura: caixaState.initialAmount,
       esperado: expected,
@@ -1753,7 +2002,14 @@ async function doCloseCaixa(expected) {
     </div>
   `;
 
-  caixaState = { open: false, initialAmount: 0, openedAt: null, openedBy: null };
+  caixaState = {
+    open: false,
+    initialAmount: 0,
+    openedAt: null,
+    openedBy: null,
+    loja: currentStoreId || DEFAULT_STORE_ID,
+    lojaNome: currentStore ? currentStore.nome : null,
+  };
   await saveCaixaState();
   updateSyncCount();
   toast('Caixa fechado. ' + diffLabel + ': ' + fmt(Math.abs(diff)), diff >= 0 ? 'success' : 'error');
@@ -1763,7 +2019,7 @@ async function doCloseCaixa(expected) {
 async function loadDailySequence() {
   try {
     const sales = await dbGetAll('vendas');
-    const todaySales = sales.filter(s => s.dataLocal === today());
+    const todaySales = sales.filter(s => s.dataLocal === today() && (s.loja || DEFAULT_STORE_ID) === (currentStoreId || DEFAULT_STORE_ID));
     dailySequence = todaySales.length;
   } catch (e) { dailySequence = 0; }
 }
@@ -1814,14 +2070,17 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== PHONE MASK =====
-document.getElementById('loginPhone').addEventListener('input', function(e) {
-  let v = this.value.replace(/\D/g, '');
-  if (v.length > 11) v = v.slice(0, 11);
-  if (v.length > 7) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
-  else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
-  else if (v.length > 0) v = '(' + v;
-  this.value = v;
-});
+var loginPhoneEl = document.getElementById('loginPhone');
+if (loginPhoneEl) {
+  loginPhoneEl.addEventListener('input', function(e) {
+    let v = this.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length > 7) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+    else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+    else if (v.length > 0) v = '(' + v;
+    this.value = v;
+  });
+}
 
 // ===== BARCODE SCANNER =====
 let scannerActive = false;
@@ -2133,7 +2392,7 @@ function generateLabels() {
   const variation = product.variacoes[varIndex];
   const qty = parseInt(document.getElementById('labelQty').value) || 1;
 
-  const qrUrl = `https://clubedonatural.vercel.app/catalogo?produto=${product.id}`;
+  const qrUrl = `https://clubedonatural.com/catalogo?produto=${product.id}`;
   const qrSvg = generateQRCodeSVG(qrUrl, 100);
 
   const preview = document.getElementById('labelPreview');
@@ -2149,7 +2408,7 @@ function generateLabels() {
     html += `
       <div class="product-label">
         <div class="label-header">
-          <img class="label-logo" src="../img/logo-icon.svg" alt="" style="filter:brightness(10)">
+          <img class="label-logo" src="../img/logo-full.png" alt="">
           <div class="label-brand">Clube do <span>Natural</span></div>
         </div>
         <div class="label-body">
@@ -2181,6 +2440,324 @@ function printLabels() {
   window.print();
 }
 
+// ===== ASSINATURA RÁPIDA =====
+function openSubscriptionModal() {
+  let existing = document.getElementById('subModalOverlay');
+  if (existing) { existing.remove(); return; }
+
+  // Get products that allow subscription
+  const subProducts = allProducts.filter(p => p.assinatura || p.recorrencia);
+  const prodOptions = allProducts.map(p => {
+    const price = p.variacoes && p.variacoes[0] ? p.variacoes[0].preco : (p.preco || 0);
+    return `<option value="${p.id}" data-price="${price}">${p.nome} — R$ ${price.toFixed(2).replace('.',',')}</option>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'subModalOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.2);">
+      <div style="background:linear-gradient(135deg,#1B4332,#2D6A4F);color:#fff;padding:16px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between;">
+        <h3 style="margin:0;font-size:17px;">🔄 Assinatura Rápida</h3>
+        <button onclick="document.getElementById('subModalOverlay').remove()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">✕</button>
+      </div>
+      <form id="subForm" style="padding:20px;">
+        <!-- Cliente -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;">📱 Telefone do cliente *</label>
+          <input type="tel" id="subPhone" required placeholder="(11) 99999-9999" maxlength="15" style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:16px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;">👤 Nome *</label>
+          <input type="text" id="subName" required placeholder="Nome do cliente" style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;box-sizing:border-box;">
+        </div>
+
+        <!-- Endereço com CEP API -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;">📦 CEP para entrega *</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="subCep" required placeholder="00000-000" maxlength="9" style="flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;box-sizing:border-box;">
+            <button type="button" onclick="buscarCep()" style="padding:12px 16px;background:#2D6A4F;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;white-space:nowrap;">Buscar</button>
+          </div>
+        </div>
+        <div id="subAddressFields" style="display:none;">
+          <div style="display:grid;grid-template-columns:3fr 1fr;gap:8px;margin-bottom:10px;">
+            <input type="text" id="subRua" placeholder="Rua" style="padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            <input type="text" id="subNumero" placeholder="Nº" required style="padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+            <input type="text" id="subBairro" placeholder="Bairro" style="padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            <input type="text" id="subCidade" placeholder="Cidade" style="padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+          </div>
+          <input type="text" id="subComplemento" placeholder="Complemento (apt, bloco...)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">
+        </div>
+
+        <!-- Produtos da assinatura -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;">🛒 Produtos da assinatura</label>
+          <div id="subProductsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:8px;">
+            <select id="subProductSelect" style="flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+              ${prodOptions}
+            </select>
+            <button type="button" onclick="addSubProduct()" style="padding:10px 14px;background:#2D6A4F;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">+ Adicionar</button>
+          </div>
+        </div>
+
+        <!-- Frequência e Pagamento -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;">📅 Frequência</label>
+            <select id="subFreq" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;">
+              <option value="semanal">Semanal</option>
+              <option value="quinzenal" selected>Quinzenal</option>
+              <option value="mensal">Mensal</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;">💳 Pagamento</label>
+            <select id="subPayment" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;">
+              <option value="pix">PIX</option>
+              <option value="cartao">Cartão</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="boleto">Boleto</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Resumo -->
+        <div id="subResumo" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:16px;display:none;">
+          <div style="font-size:13px;font-weight:700;color:#1B4332;margin-bottom:4px;">Resumo da Assinatura</div>
+          <div id="subResumoItems" style="font-size:13px;color:#333;"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-weight:700;font-size:15px;color:#1B4332;">
+            <span>Total por entrega</span>
+            <span id="subResumoTotal">R$ 0,00</span>
+          </div>
+          <div style="font-size:11px;color:#10B981;margin-top:2px;" id="subResumoDiscLabel">Desconto aplicado na assinatura</div>
+        </div>
+
+        <button type="submit" style="width:100%;padding:14px;background:linear-gradient(135deg,#2D6A4F,#40916C);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">
+          ✅ Fechar Assinatura
+        </button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  // Phone mask
+  document.getElementById('subPhone').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length > 7) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+    else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+    else if (v.length > 0) v = '(' + v;
+    this.value = v;
+  });
+
+  // CEP mask
+  document.getElementById('subCep').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '');
+    if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5,8);
+    this.value = v;
+    if (v.replace('-','').length === 8) buscarCep();
+  });
+
+  // Form submit
+  document.getElementById('subForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    salvarAssinatura();
+  });
+
+  // Pre-load cart items into subscription
+  _subProducts = [];
+  if (cart.length > 0) {
+    cart.forEach(c => {
+      const prod = allProducts.find(p => p.id === c.produtoId);
+      const price = c.precoUnit || (prod && prod.variacoes && prod.variacoes[0] ? prod.variacoes[0].preco : 0);
+      _subProducts.push({ id: c.produtoId || c.key, nome: c.nome, price: price, qty: c.qty });
+    });
+    renderSubProducts();
+  }
+
+  // Pre-fill customer name from cart
+  var custInput = document.getElementById('customerInput');
+  if (custInput && custInput.value.trim()) {
+    document.getElementById('subName').value = custInput.value.trim();
+  }
+
+  document.getElementById('subPhone').focus();
+}
+
+// Subscription product list state
+let _subProducts = [];
+
+function addSubProduct() {
+  const select = document.getElementById('subProductSelect');
+  const opt = select.options[select.selectedIndex];
+  const id = opt.value;
+  const nome = opt.textContent.split(' — ')[0];
+  const price = parseFloat(opt.dataset.price) || 0;
+
+  if (_subProducts.find(p => p.id === id)) {
+    const existing = _subProducts.find(p => p.id === id);
+    existing.qty++;
+  } else {
+    _subProducts.push({ id, nome, price, qty: 1 });
+  }
+  renderSubProducts();
+}
+
+function removeSubProduct(id) {
+  _subProducts = _subProducts.filter(p => p.id !== id);
+  renderSubProducts();
+}
+
+function changeSubQty(id, delta) {
+  const p = _subProducts.find(x => x.id === id);
+  if (!p) return;
+  p.qty = Math.max(1, p.qty + delta);
+  renderSubProducts();
+}
+
+function renderSubProducts() {
+  const list = document.getElementById('subProductsList');
+  const resumo = document.getElementById('subResumo');
+  const resumoItems = document.getElementById('subResumoItems');
+  const resumoTotal = document.getElementById('subResumoTotal');
+  if (!list) return;
+
+  if (_subProducts.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:#999;padding:8px;text-align:center;">Nenhum produto adicionado</div>';
+    if (resumo) resumo.style.display = 'none';
+    return;
+  }
+
+  const discMult = 1 - getSubDiscountPercent();
+  const discLabel = Math.round(getSubDiscountPercent() * 100);
+  list.innerHTML = _subProducts.map(p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+      <span style="flex:1;font-size:13px;color:#1B4332;font-weight:500;">${p.nome}</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button type="button" onclick="changeSubQty('${p.id}',-1)" style="width:24px;height:24px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:14px;">−</button>
+        <span style="font-size:14px;font-weight:600;min-width:20px;text-align:center;">${p.qty}</span>
+        <button type="button" onclick="changeSubQty('${p.id}',1)" style="width:24px;height:24px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:14px;">+</button>
+      </div>
+      <span style="font-size:13px;color:#333;font-weight:600;min-width:70px;text-align:right;">R$ ${(p.price * p.qty * discMult).toFixed(2).replace('.',',')}</span>
+      <button type="button" onclick="removeSubProduct('${p.id}')" style="background:none;border:none;color:#E63946;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+  `).join('');
+
+  // Update resumo
+  const total = _subProducts.reduce((s, p) => s + p.price * p.qty * discMult, 0);
+  if (resumo) resumo.style.display = 'block';
+  if (resumoItems) {
+    resumoItems.innerHTML = _subProducts.map(p =>
+      `${p.qty}x ${p.nome} — R$ ${(p.price * p.qty * discMult).toFixed(2).replace('.',',')}`
+    ).join('<br>');
+  }
+  if (resumoTotal) resumoTotal.textContent = 'R$ ' + total.toFixed(2).replace('.',',');
+  var discLabelEl = document.getElementById('subResumoDiscLabel');
+  if (discLabelEl) discLabelEl.textContent = discLabel + '% de desconto aplicado na assinatura';
+}
+
+async function buscarCep() {
+  const cepInput = document.getElementById('subCep');
+  const cep = cepInput.value.replace(/\D/g, '');
+  if (cep.length !== 8) return;
+
+  cepInput.style.borderColor = '#F59E0B';
+  try {
+    const resp = await fetch('https://viacep.com.br/ws/' + cep + '/json/');
+    const data = await resp.json();
+    if (data.erro) {
+      toast('CEP não encontrado', 'error');
+      cepInput.style.borderColor = '#E63946';
+      return;
+    }
+    document.getElementById('subAddressFields').style.display = 'block';
+    document.getElementById('subRua').value = data.logradouro || '';
+    document.getElementById('subBairro').value = data.bairro || '';
+    document.getElementById('subCidade').value = data.localidade || '';
+    cepInput.style.borderColor = '#10B981';
+    document.getElementById('subNumero').focus();
+  } catch (e) {
+    toast('Erro ao buscar CEP', 'error');
+    cepInput.style.borderColor = '#E63946';
+  }
+}
+
+async function salvarAssinatura() {
+  if (_subProducts.length === 0) {
+    toast('Adicione pelo menos 1 produto à assinatura', 'error');
+    return;
+  }
+
+  const phone = document.getElementById('subPhone').value.trim();
+  const name = document.getElementById('subName').value.trim();
+  const cep = document.getElementById('subCep').value.trim();
+  const rua = (document.getElementById('subRua').value || '').trim();
+  const numero = (document.getElementById('subNumero').value || '').trim();
+  const bairro = (document.getElementById('subBairro').value || '').trim();
+  const cidade = (document.getElementById('subCidade').value || '').trim();
+  const complemento = (document.getElementById('subComplemento').value || '').trim();
+  const freq = document.getElementById('subFreq').value;
+  const payment = document.getElementById('subPayment').value;
+
+  if (!phone || !name) {
+    toast('Preencha telefone e nome', 'error');
+    return;
+  }
+
+  const assinatura = {
+    cliente: { nome: name, telefone: phone },
+    endereco: { cep, rua, numero, bairro, cidade, complemento },
+    itens: _subProducts.map(p => ({
+      produtoId: p.id,
+      nome: p.nome,
+      quantidade: p.qty,
+      precoOriginal: p.price,
+      precoAssinatura: +(p.price * (1 - getSubDiscountPercent())).toFixed(2),
+    })),
+    descontoPercent: Math.round(getSubDiscountPercent() * 100),
+    frequencia: freq,
+    formaPagamento: payment,
+    totalPorEntrega: +_subProducts.reduce((s, p) => s + p.price * p.qty * (1 - getSubDiscountPercent()), 0).toFixed(2),
+    status: 'ativa',
+    criadoEm: new Date().toISOString(),
+    criadoPor: currentUser ? currentUser.nome : 'PDV',
+    loja: currentStoreId || DEFAULT_STORE_ID,
+    lojaNome: currentStore ? currentStore.nome : null,
+    origem: 'pdv',
+  };
+
+  // Save to Firestore
+  try {
+    if (typeof FirestoreService !== 'undefined' && FirestoreService.ready) {
+      await FirestoreService.Subscriptions.save(assinatura);
+    } else {
+      // Offline fallback — save to sync queue
+      const pending = JSON.parse(localStorage.getItem('sync_queue_sub') || '[]');
+      pending.push(assinatura);
+      localStorage.setItem('sync_queue_sub', JSON.stringify(pending));
+    }
+    toast('Assinatura cadastrada com sucesso! 🎉', 'success');
+
+    // Award points for closing subscription
+    if (typeof MetasExtra !== 'undefined' && currentUser) {
+      const empId = currentUser.email || currentUser.nome;
+      const tasks = MetasExtra.initDailyTasks(empId);
+      const subTask = tasks.find(t => t.templateId === 'fechar_assinatura' && !t.done);
+      if (subTask) MetasExtra.completeTask(subTask.id, empId);
+    }
+
+    document.getElementById('subModalOverlay').remove();
+    _subProducts = [];
+  } catch (e) {
+    toast('Erro ao salvar assinatura: ' + e.message, 'error');
+  }
+}
+
 // ===== INIT =====
 async function init() {
   try {
@@ -2194,13 +2771,9 @@ async function init() {
   setupMobileCart();
   updateClock();
   updateOnlineStatus();
-  document.getElementById('loginPhone').focus();
-  // Register service worker for offline support
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw-pdv.js').then(reg => {
-      console.log('PDV Service Worker registered');
-    }).catch(err => console.warn('SW registration failed:', err));
-  }
+  var lp = document.getElementById('loginPhone');
+  if (lp) lp.focus();
+  // PDV uses main SW from root — no separate PDV SW needed
 }
 
 init();

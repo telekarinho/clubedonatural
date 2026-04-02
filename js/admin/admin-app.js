@@ -100,6 +100,7 @@ const AdminApp = (() => {
   function showAdminShell(user) {
     els.adminShell.hidden = false;
     renderUserInfo(user);
+    populateStoreSelector(user);
 
     // Navigate to default page
     const activePage = AppState.get('activeAdminPage') || 'dashboard';
@@ -131,6 +132,35 @@ const AdminApp = (() => {
       motoboy: 'Motoboy',
     };
     els.sidebarUserCargo.textContent = cargoLabels[user.cargo] || user.cargo;
+  }
+
+  function populateStoreSelector(user) {
+    if (!els.storeSelector) return;
+    const stores = (typeof AppState !== 'undefined' && AppState.getAccessibleStoreIds)
+      ? AppState.getAccessibleStoreIds()
+      : [];
+    const sourceStores = Array.isArray(window.DataStores) ? window.DataStores : [];
+
+    if (user && user.cargo === 'dono') {
+      els.storeSelector.innerHTML = '<option value="todas">Todas as Lojas</option>' +
+        sourceStores.map(store => `<option value="${store.id}">${store.nome.split(' - ')[1] || store.nome}</option>`).join('');
+      els.storeSelector.disabled = false;
+      return;
+    }
+
+    const allowedStores = sourceStores.filter(store => stores.includes(store.id));
+    els.storeSelector.innerHTML = allowedStores.map(store =>
+      `<option value="${store.id}">${store.nome.split(' - ')[1] || store.nome}</option>`
+    ).join('');
+
+    if (allowedStores.length === 0) {
+      els.storeSelector.innerHTML = '<option value="">Sem loja vinculada</option>';
+      els.storeSelector.disabled = true;
+      return;
+    }
+
+    els.storeSelector.value = allowedStores[0].id;
+    els.storeSelector.disabled = true;
   }
 
   function applyPermissions(user) {
@@ -185,14 +215,14 @@ const AdminApp = (() => {
   async function triggerPageRender(page) {
     const selectedStore = els.storeSelector.value;
 
-    // Gerente scoping: force store filter to their assigned store
+    // Store-scoped users stay locked to their assigned unit
     const user = AppState.get('user');
-    const effectiveStore = (user && user.cargo === 'gerente' && AppState.get('userStoreId'))
+    const isStoreScopedUser = user && typeof AppState !== 'undefined' && AppState.isNetworkAdmin && !AppState.isNetworkAdmin();
+    const effectiveStore = (isStoreScopedUser && AppState.get('userStoreId'))
       ? AppState.get('userStoreId')
       : selectedStore;
 
-    // Update store selector for gerente
-    if (user && user.cargo === 'gerente' && AppState.get('userStoreId')) {
+    if (isStoreScopedUser && AppState.get('userStoreId')) {
       els.storeSelector.value = AppState.get('userStoreId');
       els.storeSelector.disabled = true;
     }
@@ -331,7 +361,10 @@ const AdminApp = (() => {
   ------------------------------------------ */
   function updatePedidosBadge() {
     const orders = Storage.get('orders') || [];
-    const pendingCount = orders.filter(o =>
+    const scopedOrders = (typeof AppState !== 'undefined' && AppState.isNetworkAdmin && !AppState.isNetworkAdmin())
+      ? orders.filter(o => o.loja === AppState.getUserStoreId())
+      : orders;
+    const pendingCount = scopedOrders.filter(o =>
       o.status === 'pendente' || o.status === 'preparando'
     ).length;
 

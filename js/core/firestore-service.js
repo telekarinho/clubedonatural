@@ -64,6 +64,44 @@ const FirestoreService = (() => {
     return user ? user.nome : 'Admin';
   }
 
+  function currentUserRole() {
+    const user = typeof AppState !== 'undefined' ? AppState.get('user') : null;
+    return user ? user.cargo : null;
+  }
+
+  function currentUserStoreId() {
+    if (typeof AppState !== 'undefined' && AppState.getUserStoreId) {
+      return AppState.getUserStoreId();
+    }
+    const user = typeof AppState !== 'undefined' ? AppState.get('user') : null;
+    return user ? user.storeId || null : null;
+  }
+
+  function isNetworkAdmin() {
+    return currentUserRole() === 'dono';
+  }
+
+  function getScopedStoreIds() {
+    if (isNetworkAdmin()) return null;
+    const storeId = currentUserStoreId();
+    return storeId ? [storeId] : [];
+  }
+
+  function ensureStoreAccess(storeId) {
+    const scoped = getScopedStoreIds();
+    if (scoped && storeId && !scoped.includes(storeId)) {
+      throw new Error('Acesso negado para esta loja');
+    }
+  }
+
+  async function getAllowedStores() {
+    const allStores = await ensureDb().collection('lojas').get();
+    const mapped = allStores.docs.map(docToObj);
+    const scoped = getScopedStoreIds();
+    if (!scoped) return mapped;
+    return mapped.filter(store => scoped.includes(store.id));
+  }
+
   /* ------------------------------------------
      PRODUCTS — /produtos/{id}
      Global catalog. Each product has global data.
@@ -113,11 +151,11 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Stores = {
     async getAll() {
-      const snap = await ensureDb().collection('lojas').get();
-      return snap.docs.map(docToObj);
+      return getAllowedStores();
     },
 
     async getById(id) {
+      ensureStoreAccess(id);
       const doc = await ensureDb().collection('lojas').doc(id).get();
       return doc.exists ? docToObj(doc) : null;
     },
@@ -142,7 +180,9 @@ const FirestoreService = (() => {
     onSnapshot(callback) {
       const unsub = ensureDb().collection('lojas')
         .onSnapshot(snap => {
-          callback(snap.docs.map(docToObj));
+          const scoped = getScopedStoreIds();
+          const stores = snap.docs.map(docToObj);
+          callback(scoped ? stores.filter(store => scoped.includes(store.id)) : stores);
         });
       _listeners.push(unsub);
       return unsub;
@@ -310,6 +350,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Employees = {
     async getForStore(storeId) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('funcionarios').get();
@@ -317,15 +358,15 @@ const FirestoreService = (() => {
     },
 
     async getAll() {
-      // Get employees from all stores + global
       const stores = await Stores.getAll();
       const allEmployees = [];
 
-      // Global employees (dono-level)
-      const globalSnap = await ensureDb().collection('funcionarios').get();
-      globalSnap.docs.forEach(doc => {
-        allEmployees.push({ ...docToObj(doc), loja: null });
-      });
+      if (isNetworkAdmin()) {
+        const globalSnap = await ensureDb().collection('funcionarios').get();
+        globalSnap.docs.forEach(doc => {
+          allEmployees.push({ ...docToObj(doc), loja: null });
+        });
+      }
 
       // Per-store employees
       await Promise.all(stores.map(async (store) => {
@@ -351,9 +392,11 @@ const FirestoreService = (() => {
       delete data._id;
 
       if (employee.loja) {
+        ensureStoreAccess(employee.loja);
         await d.collection('lojas').doc(employee.loja)
           .collection('funcionarios').doc(id).set(data, { merge: true });
       } else {
+        if (!isNetworkAdmin()) throw new Error('Acesso negado para funcionario global');
         await d.collection('funcionarios').doc(id).set(data, { merge: true });
       }
       return id;
@@ -361,10 +404,12 @@ const FirestoreService = (() => {
 
     async delete(employeeId, storeId) {
       if (storeId) {
+        ensureStoreAccess(storeId);
         await ensureDb()
           .collection('lojas').doc(storeId)
           .collection('funcionarios').doc(employeeId).delete();
       } else {
+        if (!isNetworkAdmin()) throw new Error('Acesso negado para funcionario global');
         await ensureDb().collection('funcionarios').doc(employeeId).delete();
       }
     },
@@ -376,6 +421,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Orders = {
     async getForStore(storeId, limit = 200) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('pedidos')
@@ -407,6 +453,7 @@ const FirestoreService = (() => {
     },
 
     async save(storeId, order) {
+      ensureStoreAccess(storeId);
       const d = ensureDb();
       const id = order.id || order._id || order.numero || d.collection('pedidos').doc().id;
       const data = cleanUndefined({
@@ -422,6 +469,7 @@ const FirestoreService = (() => {
     },
 
     async updateStatus(storeId, orderId, status) {
+      ensureStoreAccess(storeId);
       await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('pedidos').doc(orderId)
@@ -429,6 +477,7 @@ const FirestoreService = (() => {
     },
 
     onSnapshot(storeId, callback) {
+      ensureStoreAccess(storeId);
       const unsub = ensureDb()
         .collection('lojas').doc(storeId)
         .collection('pedidos')
@@ -447,6 +496,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const NotasFiscais = {
     async getForStore(storeId) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('notas_fiscais')
@@ -456,6 +506,7 @@ const FirestoreService = (() => {
     },
 
     async save(storeId, nf) {
+      ensureStoreAccess(storeId);
       const d = ensureDb();
       const id = nf.id || nf._id || d.collection('notas_fiscais').doc().id;
       const data = cleanUndefined({
@@ -500,12 +551,18 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Subscriptions = {
     async getAll() {
-      const snap = await ensureDb().collection('assinaturas')
-        .orderBy('createdAt', 'desc').get();
+      let ref = ensureDb().collection('assinaturas').orderBy('createdAt', 'desc');
+      if (!isNetworkAdmin() && currentUserStoreId()) {
+        ref = ensureDb().collection('assinaturas')
+          .where('loja', '==', currentUserStoreId())
+          .orderBy('createdAt', 'desc');
+      }
+      const snap = await ref.get();
       return snap.docs.map(docToObj);
     },
 
     async getForStore(storeId) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb().collection('assinaturas')
         .where('loja', '==', storeId).get();
       return snap.docs.map(docToObj);
@@ -513,6 +570,7 @@ const FirestoreService = (() => {
 
     async save(sub) {
       const d = ensureDb();
+      if (sub.loja) ensureStoreAccess(sub.loja);
       const id = sub.id || sub._id || d.collection('assinaturas').doc().id;
       const data = cleanUndefined({ ...sub, id, updatedAt: timestamp() });
       delete data._id;
@@ -527,6 +585,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Caixa = {
     async getForStore(storeId) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('caixa')
@@ -554,6 +613,7 @@ const FirestoreService = (() => {
     },
 
     async save(storeId, session) {
+      ensureStoreAccess(storeId);
       const d = ensureDb();
       const id = session.id || session._id || d.collection('caixa').doc().id;
       const data = cleanUndefined({ ...session, id, updatedAt: timestamp() });
@@ -568,6 +628,7 @@ const FirestoreService = (() => {
     return {
       async getByFilter(storeId, periodKey) {
         if (storeId) {
+          ensureStoreAccess(storeId);
           let ref = ensureDb()
             .collection('lojas').doc(storeId)
             .collection(collectionName);
@@ -592,6 +653,7 @@ const FirestoreService = (() => {
       },
 
       async save(storeId, docData) {
+        ensureStoreAccess(storeId);
         const d = ensureDb();
         const id = docData.id || docData._id || d.collection(collectionName).doc().id;
         const data = cleanUndefined({
@@ -608,6 +670,7 @@ const FirestoreService = (() => {
       },
 
       async delete(storeId, docId) {
+        ensureStoreAccess(storeId);
         await ensureDb()
           .collection('lojas').doc(storeId)
           .collection(collectionName).doc(docId).delete();
@@ -689,6 +752,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const StockOps = {
     async entrada(storeId, productId, productName, qty, motivo, nota) {
+      ensureStoreAccess(storeId);
       const stockDoc = await Stock.getForProduct(storeId, productId);
       const currentQty = stockDoc ? stockDoc.quantidade : 0;
       const newQty = currentQty + qty;
@@ -708,6 +772,7 @@ const FirestoreService = (() => {
     },
 
     async saida(storeId, productId, productName, qty, motivo, nota) {
+      ensureStoreAccess(storeId);
       const stockDoc = await Stock.getForProduct(storeId, productId);
       const currentQty = stockDoc ? stockDoc.quantidade : 0;
       if (qty > currentQty) throw new Error('Quantidade excede estoque atual');
@@ -728,6 +793,8 @@ const FirestoreService = (() => {
     },
 
     async transferir(fromStoreId, toStoreId, productId, productName, qty) {
+      ensureStoreAccess(fromStoreId);
+      ensureStoreAccess(toStoreId);
       const fromStock = await Stock.getForProduct(fromStoreId, productId);
       const toStock = await Stock.getForProduct(toStoreId, productId);
       const fromQty = fromStock ? fromStock.quantidade : 0;
@@ -761,6 +828,7 @@ const FirestoreService = (() => {
     },
 
     async ajustar(storeId, productId, productName, newQty, nota) {
+      ensureStoreAccess(storeId);
       const stockDoc = await Stock.getForProduct(storeId, productId);
       const currentQty = stockDoc ? stockDoc.quantidade : 0;
 
@@ -779,6 +847,7 @@ const FirestoreService = (() => {
     },
 
     async autoDeduct(storeId, order) {
+      ensureStoreAccess(storeId);
       if (!order || !order.items) return;
       for (const item of order.items) {
         const stockDoc = await Stock.getForProduct(storeId, item.productId);
@@ -801,6 +870,7 @@ const FirestoreService = (() => {
     },
 
     async entradaFromNFe(storeId, xmlString) {
+      ensureStoreAccess(storeId);
       const { nfInfo, items } = parseNFeXML(xmlString);
       const results = [];
 

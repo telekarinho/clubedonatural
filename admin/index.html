@@ -357,6 +357,7 @@
         nome: userData.displayName || CdnAuth.currentUser.displayName || CdnAuth.currentUser.email,
         cargo: userData.role || 'pendente',
         permissions: PERMISSIONS[userData.role] || [],
+        storeId: userData.storeId || null,
         email: CdnAuth.currentUser.email,
         photoURL: CdnAuth.currentUser.photoURL
       };
@@ -364,6 +365,7 @@
       if (typeof AppState !== 'undefined') {
         AppState.set('user', adminUser);
         AppState.set('isAdmin', true);
+        AppState.set('userStoreId', userData.storeId || null);
       }
       if (typeof Storage !== 'undefined' && Storage.set) {
         Storage.set('user', adminUser);

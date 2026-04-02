@@ -83,8 +83,21 @@ service cloud.firestore {
 
       // Per-store fiscal notes
       match /notas_fiscais/{nfId} {
-        allow read: if isAdmin() || isGerenteOfStore(storeId);
+        allow read: if isAdmin() || isGerenteOfStore(storeId) || isCaixaOfStore(storeId);
+        allow write: if isAdmin() || isGerenteOfStore(storeId) || isCaixaOfStore(storeId);
+      }
+
+      // Per-store fiscal configuration
+      match /fiscal_config/{docId} {
+        allow read: if isAdmin() || isGerenteOfStore(storeId) || isCaixaOfStore(storeId);
         allow write: if isAdmin() || isGerenteOfStore(storeId);
+      }
+
+      // Per-store fiscal audit trail
+      match /fiscal_audit_logs/{docId} {
+        allow read: if isAdmin() || isGerenteOfStore(storeId) || isCaixaOfStore(storeId);
+        allow create: if isAdmin() || isGerenteOfStore(storeId) || isCaixaOfStore(storeId);
+        allow update, delete: if isAdmin();
       }
 
       // Per-store cash register

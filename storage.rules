@@ -9,5 +9,13 @@ service firebase.storage {
       allow read: if true;
       allow write: if signedIn();
     }
+
+    match /fiscal-certificados/{storeId}/{fileName} {
+      allow read, write: if signedIn();
+    }
+
+    match /fiscal-pdfs/{storeId}/{fileName} {
+      allow read, write: if signedIn();
+    }
   }
 }

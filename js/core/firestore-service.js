@@ -54,6 +54,42 @@ const FirestoreService = (() => {
     return firebase.firestore.FieldValue.serverTimestamp();
   }
 
+  function storageAvailable() {
+    return !!(CdnFirebase && CdnFirebase.storage);
+  }
+
+  function sanitizeFileName(name) {
+    return String(name || 'arquivo')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 120) || 'arquivo';
+  }
+
+  async function uploadToStorage(path, file, customMetadata = {}) {
+    if (!storageAvailable()) {
+      throw new Error('Firebase Storage indisponivel');
+    }
+    const ref = CdnFirebase.storage.ref(path);
+    const snapshot = await ref.put(file, {
+      contentType: file.type || 'application/octet-stream',
+      customMetadata: Object.fromEntries(
+        Object.entries(customMetadata).map(([k, v]) => [k, String(v)])
+      ),
+    });
+    const downloadURL = await snapshot.ref.getDownloadURL();
+    return {
+      path,
+      downloadURL,
+      fullPath: snapshot.ref.fullPath,
+      name: snapshot.ref.name,
+      contentType: snapshot.metadata.contentType || file.type || '',
+      size: Number(snapshot.metadata.size || file.size || 0),
+      updated: snapshot.metadata.updated || null,
+    };
+  }
+
   function currentUserId() {
     return CdnFirebase.auth && CdnFirebase.auth.currentUser
       ? CdnFirebase.auth.currentUser.uid : null;
@@ -516,6 +552,27 @@ const FirestoreService = (() => {
       return snap.docs.map(docToObj);
     },
 
+    async getAll(limitPerStore = 100) {
+      const stores = await Stores.getAll();
+      const allNotas = [];
+      await Promise.all(stores.map(async (store) => {
+        const snap = await ensureDb()
+          .collection('lojas').doc(store.id)
+          .collection('notas_fiscais')
+          .orderBy('data', 'desc')
+          .limit(limitPerStore)
+          .get();
+        snap.docs.forEach(doc => {
+          allNotas.push({ ...docToObj(doc), loja: store.id });
+        });
+      }));
+      return allNotas.sort((a, b) => {
+        const da = new Date(a.data || a.createdAt || 0).getTime();
+        const dbt = new Date(b.data || b.createdAt || 0).getTime();
+        return dbt - da;
+      });
+    },
+
     async save(storeId, nf) {
       ensureStoreAccess(storeId);
       const d = ensureDb();
@@ -524,12 +581,133 @@ const FirestoreService = (() => {
         ...nf,
         id,
         loja: storeId,
-        createdAt: timestamp(),
+        updatedAt: timestamp(),
+        updatedBy: currentUserId(),
+        createdAt: nf.createdAt || timestamp(),
       });
       delete data._id;
       await d.collection('lojas').doc(storeId)
         .collection('notas_fiscais').doc(id).set(data, { merge: true });
       return id;
+    },
+  };
+
+  function createStoreSingletonCollection(collectionName, docId = 'default') {
+    return {
+      async get(storeId) {
+        ensureStoreAccess(storeId);
+        const doc = await ensureDb()
+          .collection('lojas').doc(storeId)
+          .collection(collectionName).doc(docId)
+          .get();
+        return doc.exists ? docToObj(doc) : null;
+      },
+
+      async getAll() {
+        const stores = await Stores.getAll();
+        const docs = [];
+        await Promise.all(stores.map(async (store) => {
+          const doc = await ensureDb()
+            .collection('lojas').doc(store.id)
+            .collection(collectionName).doc(docId)
+            .get();
+          if (doc.exists) docs.push({ ...docToObj(doc), storeId: store.id });
+        }));
+        return docs;
+      },
+
+      async save(storeId, docData) {
+        ensureStoreAccess(storeId);
+        const data = cleanUndefined({
+          ...docData,
+          id: docId,
+          storeId,
+          updatedAt: timestamp(),
+          updatedBy: currentUserId(),
+        });
+        delete data._id;
+        await ensureDb()
+          .collection('lojas').doc(storeId)
+          .collection(collectionName).doc(docId)
+          .set(data, { merge: true });
+        return docId;
+      },
+    };
+  }
+
+  const FiscalConfig = {
+    ...createStoreSingletonCollection('fiscal_config', 'default'),
+
+    async reserveNumber(storeId, sequenceField, startAt = 1) {
+      ensureStoreAccess(storeId);
+      const ref = ensureDb()
+        .collection('lojas').doc(storeId)
+        .collection('fiscal_config').doc('default');
+
+      return ensureDb().runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        const data = snap.exists ? snap.data() : {};
+        const nextValue = Number(data[sequenceField] || startAt);
+        tx.set(ref, cleanUndefined({
+          id: 'default',
+          storeId,
+          [sequenceField]: nextValue + 1,
+          updatedAt: timestamp(),
+          updatedBy: currentUserId(),
+        }), { merge: true });
+        return nextValue;
+      });
+    },
+
+    async uploadCertificate(storeId, file) {
+      ensureStoreAccess(storeId);
+      const safeName = sanitizeFileName(file && file.name ? file.name : 'certificado.pfx');
+      const path = `fiscal-certificados/${storeId}/${Date.now()}-${safeName}`;
+      const upload = await uploadToStorage(path, file, {
+        storeId,
+        uploadedBy: currentUserId() || '',
+        uploadedByName: currentUserName() || '',
+        module: 'fiscal',
+      });
+      return {
+        nomeArquivo: file.name || safeName,
+        storagePath: upload.fullPath,
+        downloadURL: upload.downloadURL,
+        tamanho: upload.size,
+        contentType: upload.contentType,
+        enviadoEm: new Date().toISOString(),
+        enviadoPor: currentUserName(),
+        enviadoPorId: currentUserId(),
+      };
+    },
+  };
+
+  const FiscalAudit = {
+    async add(storeId, entry) {
+      ensureStoreAccess(storeId);
+      const d = ensureDb();
+      const ref = d.collection('lojas').doc(storeId).collection('fiscal_audit_logs').doc();
+      const data = cleanUndefined({
+        ...entry,
+        id: ref.id,
+        storeId,
+        createdAt: timestamp(),
+        createdBy: currentUserId(),
+        createdByName: currentUserName(),
+      });
+      await ref.set(data);
+      return ref.id;
+    },
+
+    async getForStore(storeId, limit = 100) {
+      ensureStoreAccess(storeId);
+      const snap = await ensureDb()
+        .collection('lojas').doc(storeId)
+        .collection('fiscal_audit_logs')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get();
+      return snap.docs.map(docToObj);
     },
   };
 
@@ -1166,6 +1344,8 @@ const FirestoreService = (() => {
     Customers,
     Subscriptions,
     Caixa,
+    FiscalConfig,
+    FiscalAudit,
     FinancialPeriods,
     FixedCosts,
     VariableCosts,

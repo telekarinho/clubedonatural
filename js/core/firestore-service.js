@@ -123,7 +123,7 @@ const FirestoreService = (() => {
   }
 
   function isNetworkAdmin() {
-    return currentUserRole() === 'dono';
+    return currentUserRole() === 'dono' && !currentUserStoreId();
   }
 
   function getScopedStoreIds() {

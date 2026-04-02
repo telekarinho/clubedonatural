@@ -183,7 +183,7 @@ const AppState = (() => {
     },
 
     isNetworkAdmin() {
-      return !!reactiveState.user && reactiveState.user.cargo === 'dono';
+      return !!reactiveState.user && reactiveState.user.cargo === 'dono' && !this.getUserStoreId();
     },
 
     getAccessibleStoreIds() {

@@ -83,6 +83,36 @@
     return grouped;
   }
 
+  function getStores() {
+    return Array.isArray(window.DataStores) ? window.DataStores : [];
+  }
+
+  function getStoreName(storeId) {
+    if (!storeId) return 'Rede inteira';
+    const store = getStores().find(item => item.id === storeId);
+    return store ? (store.nome.split(' - ')[1] || store.nome) : storeId;
+  }
+
+  function getStoreScopeLabel(user) {
+    if (!user.storeId) {
+      return user.role === 'dono' ? 'Acesso em toda a rede' : 'Sem loja vinculada';
+    }
+    return `Loja: ${getStoreName(user.storeId)}`;
+  }
+
+  function storeSelectHtml(user, attrName, includeNetworkOption) {
+    const role = user.role || 'atendente';
+    const selectedStore = user.storeId || '';
+    const stores = getStores();
+    const allowNetwork = includeNetworkOption && role === 'dono';
+    return `
+      <select class="user-card__role-select" ${attrName}="${user.uid}">
+        ${allowNetwork ? `<option value="">🌐 Rede inteira</option>` : '<option value="">Selecione a loja</option>'}
+        ${stores.map(store => `<option value="${store.id}" ${selectedStore === store.id ? 'selected' : ''}>🏪 ${store.nome.split(' - ')[1] || store.nome}</option>`).join('')}
+      </select>
+    `;
+  }
+
   window.UsersAdmin = {
     users: [],
     loaded: false,
@@ -153,6 +183,7 @@
       const summary = permissions.length
         ? permissions.map(key => MODULES.find(item => item.key === key)?.label || key).slice(0, 4).join(', ')
         : 'Sem acesso liberado';
+      const storeScope = getStoreScopeLabel(user);
 
       return `
         <div class="user-card ${isPending ? 'user-card--pending' : ''}" data-uid="${user.uid}">
@@ -171,6 +202,7 @@
             <span class="user-card__role" style="background:${role.color}15;color:${role.color};border:1px solid ${role.color}30">
               ${role.icon} ${role.label}
             </span>
+            <span class="user-card__date">${storeScope}</span>
             <span class="user-card__date">Criado: ${createdAt}</span>
             <span class="user-card__date">Último acesso: ${lastLogin}</span>
           </div>
@@ -183,6 +215,8 @@
                   `<option value="${key}" ${key === 'atendente' ? 'selected' : ''}>${value.icon} ${value.label}</option>`
                 ).join('')}
               </select>
+              <label style="display:block;width:100%;font-size:12px;font-weight:700;color:#475569;">Loja / franquia</label>
+              ${storeSelectHtml({ ...user, role: 'atendente' }, 'data-store-select', false)}
               <button class="btn btn--sm btn--primary" data-approve-user="${user.uid}">✅ Aprovar</button>
               <button class="btn btn--sm btn--danger" data-reject-user="${user.uid}">❌ Rejeitar</button>
             </div>
@@ -205,6 +239,7 @@
                   `<option value="${key}" ${user.role === key ? 'selected' : ''}>${value.icon} ${value.label}</option>`
                 ).join('')}
               </select>
+              ${storeSelectHtml(user, 'data-change-store', user.role === 'dono')}
               <button class="btn btn--sm btn--ghost" data-apply-preset="${user.uid}" ${isCurrentUser ? 'disabled' : ''}>Aplicar padrão do cargo</button>
               ${!isCurrentUser ? `<button class="btn btn--sm btn--danger-ghost" data-revoke-user="${user.uid}">Revogar</button>` : ''}
             </div>
@@ -242,6 +277,9 @@
       document.querySelectorAll('[data-change-role]').forEach(select => {
         select.addEventListener('change', () => this.changeRole(select.dataset.changeRole, select.value));
       });
+      document.querySelectorAll('[data-change-store]').forEach(select => {
+        select.addEventListener('change', () => this.changeStore(select.dataset.changeStore, select.value));
+      });
       document.querySelectorAll('[data-apply-preset]').forEach(button => {
         button.addEventListener('click', () => this.applyRolePreset(button.dataset.applyPreset));
       });
@@ -255,8 +293,15 @@
 
     async approveUser(uid) {
       const roleSelect = document.querySelector(`[data-role-select="${uid}"]`);
+      const storeSelect = document.querySelector(`[data-store-select="${uid}"]`);
       const role = roleSelect ? roleSelect.value : 'atendente';
       const permissions = getPresetPermissions(role);
+      const storeId = storeSelect ? storeSelect.value : '';
+
+      if (role !== 'dono' && !storeId) {
+        this.toast('Selecione a loja ou franquia desse usuário antes de aprovar.', 'error');
+        return;
+      }
 
       if (!confirm(`Aprovar este usuário como ${getRoleMeta(role).label}?`)) return;
       try {
@@ -264,6 +309,7 @@
           approved: true,
           role,
           permissions,
+          storeId: role === 'dono' ? (storeId || null) : storeId,
           approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
           approvedBy: CdnAuth.currentUser.uid
         });
@@ -293,15 +339,51 @@
         this.render();
         return;
       }
+      const storeSelect = document.querySelector(`[data-change-store="${uid}"]`);
+      const selectedStoreId = storeSelect ? storeSelect.value : (user.storeId || '');
+      if (newRole !== 'dono' && !selectedStoreId) {
+        this.toast('Defina uma loja para esse usuário antes de trocar o cargo.', 'error');
+        this.render();
+        return;
+      }
 
       try {
-        await CdnFirebase.db.collection('users').doc(uid).update({ role: newRole });
+        await CdnFirebase.db.collection('users').doc(uid).update({
+          role: newRole,
+          storeId: newRole === 'dono' ? (selectedStoreId || null) : selectedStoreId
+        });
         user.role = newRole;
+        user.storeId = newRole === 'dono' ? (selectedStoreId || null) : selectedStoreId;
         this.toast(`Cargo alterado para ${getRoleMeta(newRole).label}`);
         await this.refresh();
       } catch (err) {
         this.toast('Erro: ' + err.message, 'error');
         this.render();
+      }
+    },
+
+    async changeStore(uid, storeId) {
+      const user = this.users.find(item => item.uid === uid);
+      if (!user) return;
+      if (user.uid === CdnAuth.currentUser?.uid && !storeId && user.role !== 'dono') {
+        this.toast('Seu próprio acesso não pode ficar sem loja vinculada.', 'error');
+        await this.refresh();
+        return;
+      }
+      if (user.role !== 'dono' && !storeId) {
+        this.toast('Perfis operacionais precisam ter uma loja definida.', 'error');
+        await this.refresh();
+        return;
+      }
+
+      try {
+        await CdnFirebase.db.collection('users').doc(uid).update({
+          storeId: storeId || null
+        });
+        this.toast(storeId ? `Loja vinculada: ${getStoreName(storeId)}` : 'Usuário liberado para rede inteira');
+        await this.refresh();
+      } catch (err) {
+        this.toast('Erro: ' + err.message, 'error');
       }
     },
 

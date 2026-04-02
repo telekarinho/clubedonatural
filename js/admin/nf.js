@@ -144,9 +144,11 @@ const AdminNF = (() => {
       serieNfe: '1',
       nextCupomNumber: 1,
       nextNfceNumber: 1,
+      cscId: '',
+      cscToken: '',
       municipio: store && store.cidade ? store.cidade : 'Londrina',
       uf: store && store.estado ? store.estado : 'PR',
-      codigoMunicipioIbge: '',
+      codigoMunicipioIbge: inferMunicipioIbge(store && store.cidade ? store.cidade : 'Londrina', store && store.estado ? store.estado : 'PR'),
       cep: cleanDoc(store && store.cep ? store.cep : ''),
       logradouro: addressParts.logradouro,
       numero: addressParts.numero,
@@ -165,6 +167,83 @@ const AdminNF = (() => {
       certificadoSenhaCadastrada: false,
       updatedAt: null,
       ...config,
+    };
+  }
+
+  function inferMunicipioIbge(city, uf) {
+    const key = `${String(city || '').trim().toUpperCase()}-${String(uf || '').trim().toUpperCase()}`;
+    const map = {
+      'LONDRINA-PR': '4113700',
+      'CAMBÉ-PR': '4103700',
+      'CAMBE-PR': '4103700',
+      'IBIPORÃ-PR': '4110508',
+      'IBIPORA-PR': '4110508',
+      'ROLÂNDIA-PR': '4122404',
+      'ROLANDIA-PR': '4122404',
+      'APUCARANA-PR': '4101407',
+      'MARINGÁ-PR': '4115200',
+      'MARINGA-PR': '4115200',
+      'CURITIBA-PR': '4106902',
+      'SÃO PAULO-SP': '3550308',
+      'SAO PAULO-SP': '3550308',
+      'RIO DE JANEIRO-RJ': '3304557',
+      'BELO HORIZONTE-MG': '3106200',
+      'PORTO ALEGRE-RS': '4314902',
+      'FLORIANÓPOLIS-SC': '4205407',
+      'FLORIANOPOLIS-SC': '4205407',
+      'GOIÂNIA-GO': '5208707',
+      'GOIANIA-GO': '5208707',
+      'BRASÍLIA-DF': '5300108',
+      'BRASILIA-DF': '5300108',
+      'SALVADOR-BA': '2927408',
+      'FORTALEZA-CE': '2304400',
+      'RECIFE-PE': '2611606',
+    };
+    return map[key] || '';
+  }
+
+  function buildStoreAutofill(store, currentConfig = {}) {
+    const defaults = applyFiscalDefaults(store, currentConfig);
+    return {
+      emitenteNome: defaults.emitenteNome || '',
+      nomeFantasia: defaults.nomeFantasia || '',
+      cnpj: defaults.cnpj || '',
+      ie: defaults.ie || '',
+      cep: defaults.cep || '',
+      logradouro: defaults.logradouro || '',
+      numero: defaults.numero || '',
+      complemento: defaults.complemento || '',
+      bairro: defaults.bairro || '',
+      municipio: defaults.municipio || '',
+      uf: defaults.uf || 'PR',
+      codigoMunicipioIbge: defaults.codigoMunicipioIbge || inferMunicipioIbge(defaults.municipio, defaults.uf),
+      telefone: defaults.telefone || '',
+      ambiente: currentConfig.ambiente || 'homologacao',
+      crt: currentConfig.crt || '1',
+      modalidadeVarejo: currentConfig.modalidadeVarejo || 'nfce_futura',
+      nfseProvider: currentConfig.nfseProvider || 'notaas',
+      serieNfce: currentConfig.serieNfce || '1',
+      serieNfe: currentConfig.serieNfe || '1',
+      nextCupomNumber: String(Number(currentConfig.nextCupomNumber || 1)),
+      nextNfceNumber: String(Number(currentConfig.nextNfceNumber || 1)),
+    };
+  }
+
+  function getNfceSetupStatus(config) {
+    const checks = [
+      { label: 'Dados do emitente', ok: !!config.emitenteNome && cleanDoc(config.cnpj).length === 14 },
+      { label: 'Inscricao estadual', ok: !!config.ie },
+      { label: 'Endereco fiscal + IBGE', ok: !!config.logradouro && !!config.municipio && !!config.uf && !!config.codigoMunicipioIbge },
+      { label: 'Serie e numeracao', ok: !!config.serieNfce && Number(config.nextNfceNumber || 0) > 0 },
+      { label: 'CSC ID e CSC Token', ok: !!config.cscId && !!config.cscToken },
+      { label: 'Certificado A1', ok: !!config.certificadoA1 },
+    ];
+    const done = checks.filter(item => item.ok).length;
+    return {
+      checks,
+      done,
+      total: checks.length,
+      ready: done === checks.length,
     };
   }
 
@@ -526,6 +605,7 @@ const AdminNF = (() => {
   function renderOverviewTab(storeId, config) {
     const store = getStore(storeId);
     const notas = aggregateMonthNotas(storeId).slice(0, 8);
+    const nfceSetup = getNfceSetupStatus(config);
     const checks = [
       { label: 'CNPJ do emitente', ok: !!cleanDoc(config.cnpj) },
       { label: 'Endereco fiscal', ok: !!config.logradouro && !!config.municipio && !!config.uf },
@@ -554,6 +634,19 @@ const AdminNF = (() => {
           </div>
         </div>
         <div style="background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:20px;">
+          <div style="padding:14px;border-radius:14px;background:${nfceSetup.ready ? '#ECFDF5' : '#FFF7ED'};border:1px solid ${nfceSetup.ready ? '#A7F3D0' : '#FED7AA'};margin-bottom:14px;">
+            <div style="font-size:12px;color:${nfceSetup.ready ? '#166534' : '#9A3412'};text-transform:uppercase;font-weight:800;">NFC-e real</div>
+            <div style="margin-top:4px;font-size:20px;font-weight:800;color:#0F172A;">${nfceSetup.done}/${nfceSetup.total} itens prontos</div>
+            <div style="margin-top:6px;font-size:13px;color:#475569;">${nfceSetup.ready ? 'A unidade ja tem o basico para homologar a NFC-e.' : 'Falta completar os campos fiscais que a SEFAZ exige.'}</div>
+          </div>
+          <div style="display:grid;gap:8px;margin-bottom:14px;">
+            ${nfceSetup.checks.map(item => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:12px;background:${item.ok ? '#F0FDF4' : '#F8FAFC'};border:1px solid ${item.ok ? '#BBF7D0' : '#E2E8F0'};">
+                <span style="font-size:13px;color:#0F172A;">${item.label}</span>
+                ${statusChip(item.ok ? 'OK' : 'Falta', item.ok ? '#DCFCE7' : '#FFF7ED', item.ok ? '#166534' : '#9A3412')}
+              </div>
+            `).join('')}
+          </div>
           <h3 style="margin:0 0 14px;color:#1B4332;">Ultimos documentos</h3>
           <div style="display:grid;gap:10px;">
             ${notas.length ? notas.map(nota => `
@@ -574,6 +667,8 @@ const AdminNF = (() => {
 
   function renderConfigTab(storeId, config) {
     const cert = config.certificadoA1 || null;
+    const store = getStore(storeId);
+    const nfceSetup = getNfceSetupStatus(config);
     const certStatus = cert
       ? `<div style="padding:12px 14px;border-radius:12px;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;font-size:13px;"><strong>Certificado atual:</strong> ${cert.nomeArquivo || 'arquivo enviado'}<br><span>Enviado em ${cert.enviadoEm ? Utils.formatDateTime(cert.enviadoEm) : '-'} por ${cert.enviadoPor || 'usuario'}</span></div>`
       : `<div style="padding:12px 14px;border-radius:12px;background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;font-size:13px;">Nenhum certificado A1 foi enviado para esta loja.</div>`;
@@ -581,7 +676,16 @@ const AdminNF = (() => {
     return `
       <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:18px;">
         <form id="nf-config-form" style="background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:20px;">
-          <h3 style="margin:0 0 16px;color:#1B4332;">Emitente por loja</h3>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+            <div>
+              <h3 style="margin:0;color:#1B4332;">Emitente por loja</h3>
+              <div style="margin-top:6px;font-size:13px;color:#64748B;">Ja puxamos o maximo possivel do cadastro da unidade para reduzir suporte.</div>
+            </div>
+            <button type="button" id="nf-auto-fill" style="${secondaryButtonStyle()}padding:10px 14px;">Auto preencher da loja</button>
+          </div>
+          <div style="padding:12px 14px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;font-size:13px;margin-bottom:14px;">
+            O franqueado so precisa revisar o que a SEFAZ exige e completar o que nao existe no cadastro da loja, como CSC e certificado.
+          </div>
           ${formGrid([
             textField('emitenteNome', 'Razao social', config.emitenteNome),
             textField('nomeFantasia', 'Nome fantasia', config.nomeFantasia),
@@ -616,6 +720,11 @@ const AdminNF = (() => {
             textField('nextCupomNumber', 'Proximo cupom', String(config.nextCupomNumber || 1)),
             textField('nextNfceNumber', 'Proxima NFC-e', String(config.nextNfceNumber || 1)),
           ])}
+          <h4 style="margin:20px 0 12px;color:#1F2937;">NFC-e / SEFAZ</h4>
+          ${formGrid([
+            textField('cscId', 'CSC ID', config.cscId, 'Ex: 1'),
+            textField('cscToken', 'CSC Token', config.cscToken, 'Cole o token sem espacos'),
+          ])}
           <div style="margin-top:18px;">
             <label style="display:block;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:6px;">Observacoes padrao</label>
             <textarea name="observacoesPadrao" rows="4" style="${textAreaStyle()}">${escapeHtml(config.observacoesPadrao || '')}</textarea>
@@ -627,9 +736,21 @@ const AdminNF = (() => {
 
         <div style="display:grid;gap:18px;">
           <div style="background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:20px;">
+            <h3 style="margin:0 0 12px;color:#1B4332;">Checklist sem suporte</h3>
+            <div style="display:grid;gap:8px;">
+              ${nfceSetup.checks.map(item => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:12px;background:${item.ok ? '#F0FDF4' : '#FFF7ED'};border:1px solid ${item.ok ? '#BBF7D0' : '#FED7AA'};">
+                  <span style="font-size:13px;color:#0F172A;">${item.label}</span>
+                  ${statusChip(item.ok ? 'Pronto' : 'Completar', item.ok ? '#DCFCE7' : '#FFEDD5', item.ok ? '#166534' : '#9A3412')}
+                </div>
+              `).join('')}
+            </div>
+            <div style="margin-top:12px;font-size:13px;color:#64748B;">Quando tudo ficar verde, a loja ja consegue testar em homologacao com menos risco de travar.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:20px;">
             <h3 style="margin:0 0 16px;color:#1B4332;">Certificado digital A1</h3>
             ${certStatus}
-            <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;font-size:13px;">O fallback da Hostinger guarda o certificado fora do site publico e salva a senha criptografada no servidor para uso fiscal futuro da loja.</div>
+            <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;font-size:13px;">O fallback da Hostinger guarda o certificado fora do site publico e salva a senha criptografada no servidor para uso fiscal futuro da loja. O CNPJ do certificado deve bater com o CNPJ fiscal da unidade.</div>
             <form id="nf-cert-form" style="margin-top:14px;display:grid;gap:12px;">
               <div>
                 <label style="display:block;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:6px;">Arquivo .pfx ou .p12</label>
@@ -645,8 +766,10 @@ const AdminNF = (() => {
           <div style="background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:20px;">
             <h3 style="margin:0 0 12px;color:#1B4332;">Guia rapido de producao</h3>
             <ul style="margin:0;padding-left:18px;color:#475569;font-size:14px;line-height:1.6;">
-              <li>Cada franquia deve ter CNPJ, IE/IM e certificado proprios.</li>
+              <li>Use "Auto preencher da loja" para puxar CNPJ, endereco, telefone e cidade.</li>
+              <li>Cada franquia deve ter CNPJ, IE/IM, CSC e certificado proprios.</li>
               <li>Selecione ambiente de homologacao antes de ir para producao.</li>
+              <li>Para Londrina, normalmente o codigo IBGE entra automatico como 4113700.</li>
               <li>Para Londrina, preencha inscricao municipal e codigo do servico de NFS-e.</li>
               <li>O PDV usa esta configuracao da loja para gerar o PDF e reservar numeracao.</li>
             </ul>
@@ -734,6 +857,19 @@ const AdminNF = (() => {
   function bindConfigActions(storeId, config) {
     const configForm = document.getElementById('nf-config-form');
     const certForm = document.getElementById('nf-cert-form');
+    const autofillButton = document.getElementById('nf-auto-fill');
+
+    if (autofillButton) {
+      autofillButton.addEventListener('click', () => {
+        const store = getStore(storeId);
+        const values = buildStoreAutofill(store, config);
+        Object.entries(values).forEach(([name, value]) => {
+          const field = configForm ? configForm.elements.namedItem(name) : null;
+          if (field) field.value = name === 'cnpj' ? Utils.formatCNPJ(value || '') : value;
+        });
+        Toast.success('Campos base da loja preenchidos automaticamente');
+      });
+    }
 
     if (configForm) {
       configForm.addEventListener('submit', async (event) => {
@@ -752,9 +888,11 @@ const AdminNF = (() => {
           serieNfe: String(formData.get('serieNfe') || '1').trim(),
           nextCupomNumber: Number(formData.get('nextCupomNumber') || 1),
           nextNfceNumber: Number(formData.get('nextNfceNumber') || 1),
+          cscId: String(formData.get('cscId') || '').trim(),
+          cscToken: String(formData.get('cscToken') || '').trim(),
           municipio: String(formData.get('municipio') || '').trim(),
           uf: String(formData.get('uf') || '').trim().toUpperCase(),
-          codigoMunicipioIbge: String(formData.get('codigoMunicipioIbge') || '').trim(),
+          codigoMunicipioIbge: String(formData.get('codigoMunicipioIbge') || '').trim() || inferMunicipioIbge(formData.get('municipio'), formData.get('uf')),
           cep: cleanDoc(formData.get('cep')),
           logradouro: String(formData.get('logradouro') || '').trim(),
           numero: String(formData.get('numero') || '').trim(),
@@ -772,6 +910,18 @@ const AdminNF = (() => {
 
         if (!payload.emitenteNome || !payload.cnpj) {
           Toast.error('Preencha ao menos a razao social e o CNPJ da loja');
+          return;
+        }
+        if (payload.cnpj.length !== 14) {
+          Toast.error('Informe um CNPJ valido da unidade');
+          return;
+        }
+        if (payload.modalidadeVarejo === 'nfce_futura' && (!payload.cscId || !payload.cscToken)) {
+          Toast.error('Para NFC-e, preencha CSC ID e CSC Token da loja');
+          return;
+        }
+        if (payload.modalidadeVarejo === 'nfce_futura' && !payload.codigoMunicipioIbge) {
+          Toast.error('Informe o codigo do municipio IBGE para a NFC-e');
           return;
         }
 
@@ -914,6 +1064,7 @@ const AdminNF = (() => {
     const form = document.getElementById('nf-emission-form');
     const preview = document.getElementById('nf-order-preview');
     if (!form || !preview) return;
+    const nfceSetup = getNfceSetupStatus(config);
 
     let loadedOrder = null;
 
@@ -936,6 +1087,10 @@ const AdminNF = (() => {
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (type === 'nfce_preview' && !nfceSetup.ready) {
+        Toast.error('Complete o checklist fiscal da loja antes de gerar a NFC-e');
+        return;
+      }
       if (!loadedOrder) {
         await drawPreview();
         if (!loadedOrder) return;

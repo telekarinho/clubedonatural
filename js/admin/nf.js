@@ -629,7 +629,7 @@ const AdminNF = (() => {
           <div style="background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:20px;">
             <h3 style="margin:0 0 16px;color:#1B4332;">Certificado digital A1</h3>
             ${certStatus}
-            <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;font-size:13px;">O navegador nao armazena a senha do certificado por seguranca. O arquivo fica vinculado a esta loja e o backend futuro fara a assinatura.</div>
+            <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;font-size:13px;">O fallback da Hostinger guarda o certificado fora do site publico e salva a senha criptografada no servidor para uso fiscal futuro da loja.</div>
             <form id="nf-cert-form" style="margin-top:14px;display:grid;gap:12px;">
               <div>
                 <label style="display:block;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:6px;">Arquivo .pfx ou .p12</label>
@@ -815,7 +815,7 @@ const AdminNF = (() => {
 
         const updatedConfig = { ...config };
         try {
-          const metadata = await validateCertificateUpload(storeId, file);
+          const metadata = await validateCertificateUpload(storeId, file, password);
           updatedConfig.certificadoA1 = metadata;
           updatedConfig.certificadoStatus = 'enviado';
           updatedConfig.certificadoSenhaCadastrada = false;
@@ -838,14 +838,18 @@ const AdminNF = (() => {
     }
   }
 
-  async function validateCertificateUpload(storeId, file) {
+  async function validateCertificateUpload(storeId, file, password) {
     if (useFirestore()) {
       try {
         return await FirestoreService.FiscalConfig.uploadCertificate(storeId, file);
       } catch (error) {
-        throw new Error(`Upload indisponivel: ${error.message}. Ative o bucket do Firebase Storage para salvar certificados em producao.`);
+        console.warn('[AdminNF] Firebase Storage indisponivel, tentando Hostinger:', error.message);
       }
     }
+
+    const remote = await uploadCertificateViaHostinger(storeId, file, password);
+    if (remote) return remote;
+
     return {
       nomeArquivo: file.name,
       tamanho: file.size,
@@ -854,6 +858,55 @@ const AdminNF = (() => {
       enviadoPor: AppState.get('user') ? AppState.get('user').nome : 'Admin',
       storagePath: 'local-fallback',
       downloadURL: null,
+      storageProvider: 'local-fallback',
+    };
+  }
+
+  async function uploadCertificateViaHostinger(storeId, file, password) {
+    if (!navigator.onLine) {
+      throw new Error('Sem internet para enviar o certificado ao fallback da Hostinger.');
+    }
+    if (!(CdnFirebase && CdnFirebase.auth && CdnFirebase.auth.currentUser)) {
+      throw new Error('Sessao Firebase nao encontrada para autenticar o upload.');
+    }
+
+    const idToken = await CdnFirebase.auth.currentUser.getIdToken();
+    const formData = new FormData();
+    formData.append('storeId', storeId);
+    formData.append('certificatePassword', password || '');
+    formData.append('certificate', file);
+
+    const response = await fetch('https://api.clubedonatural.com/fiscal/upload-certificate.php', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: formData,
+    });
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      throw new Error('Resposta invalida do fallback da Hostinger.');
+    }
+
+    if (!response.ok || !payload || payload.ok !== true) {
+      throw new Error(payload && payload.error ? payload.error : 'Falha no fallback da Hostinger.');
+    }
+
+    return {
+      nomeArquivo: payload.fileName || file.name,
+      tamanho: Number(payload.size || file.size || 0),
+      contentType: payload.contentType || file.type || 'application/x-pkcs12',
+      enviadoEm: payload.uploadedAt || new Date().toISOString(),
+      enviadoPor: AppState.get('user') ? AppState.get('user').nome : 'Admin',
+      enviadoPorId: AppState.get('user') ? AppState.get('user').id : null,
+      storagePath: payload.storagePath || '',
+      downloadURL: null,
+      storageProvider: 'hostinger',
+      validade: payload.validUntil || '',
+      cnpjCertificado: payload.cnpj || '',
     };
   }
 

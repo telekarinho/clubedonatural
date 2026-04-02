@@ -22,6 +22,7 @@ const FinanceEngine = (() => {
   ];
 
   const VARIABLE_CATEGORIES = [
+    { id: 'compras_mercadoria', label: 'Compras de mercadoria', mandatory: true },
     { id: 'taxas_financeiras', label: 'Taxas financeiras', mandatory: true },
     { id: 'apps_delivery', label: 'Apps / delivery', mandatory: true },
     { id: 'comissoes', label: 'Comissoes', mandatory: false },
@@ -29,6 +30,7 @@ const FinanceEngine = (() => {
     { id: 'impostos_variaveis', label: 'Impostos variaveis', mandatory: true },
     { id: 'frete', label: 'Frete / entregadores', mandatory: false },
     { id: 'perdas', label: 'Perdas e estornos', mandatory: true },
+    { id: 'despesa_esporadica', label: 'Despesa esporadica', mandatory: false },
     { id: 'outros_variaveis', label: 'Outros variaveis', mandatory: false },
   ];
 
@@ -344,6 +346,7 @@ const AdminFinanceiro = (() => {
     products: [],
     orders: [],
     caixaSessions: [],
+    notas: [],
     fixedCosts: [],
     variableCosts: [],
     periods: [],
@@ -448,6 +451,23 @@ const AdminFinanceiro = (() => {
       : sessions.filter(session => session.loja === currentStoreFilter);
   }
 
+  async function loadNotas() {
+    if (typeof FirestoreService !== 'undefined' && FirestoreService.ready && FirestoreService.NotasFiscais) {
+      try {
+        if (currentStoreFilter && currentStoreFilter !== 'todas') {
+          return await FirestoreService.NotasFiscais.getForStore(currentStoreFilter);
+        }
+      } catch (error) {
+        console.warn('[Financeiro] Falha ao carregar notas:', error.message);
+      }
+    }
+
+    const notas = Storage.get('notas_fiscais') || [];
+    return currentStoreFilter === 'todas'
+      ? notas
+      : notas.filter(nota => nota.loja === currentStoreFilter);
+  }
+
   async function loadFinancialData() {
     if (typeof FirestoreService !== 'undefined' && FirestoreService.ready && FirestoreService.FixedCosts) {
       try {
@@ -475,11 +495,12 @@ const AdminFinanceiro = (() => {
   }
 
   async function loadData() {
-    const [stores, products, orders, caixaSessions, financeData] = await Promise.all([
+    const [stores, products, orders, caixaSessions, notas, financeData] = await Promise.all([
       loadStores(),
       loadProducts(),
       loadOrders(),
       loadCaixaSessions(),
+      loadNotas(),
       loadFinancialData(),
     ]);
     dataCache = {
@@ -487,6 +508,7 @@ const AdminFinanceiro = (() => {
       products,
       orders,
       caixaSessions,
+      notas,
       fixedCosts: financeData.fixedCosts,
       variableCosts: financeData.variableCosts,
       periods: financeData.periods,
@@ -635,6 +657,76 @@ const AdminFinanceiro = (() => {
     setStoredArray(STORAGE_KEYS.periods, upsertStoredDoc(STORAGE_KEYS.periods, periodDoc, 'periodKey'));
   }
 
+  function getAutomaticRevenueSummary() {
+    const orders = FinanceEngine.normalizeOrders(dataCache.orders).filter(order => {
+      if (currentStoreFilter !== 'todas' && order.loja !== currentStoreFilter) return false;
+      const { start, end } = FinanceEngine.getPeriodRange(currentPeriod);
+      const orderDate = new Date(order.data);
+      return orderDate >= start && orderDate <= end && order.status !== 'cancelado';
+    });
+
+    const summary = {
+      total: 0,
+      retirada: 0,
+      delivery: 0,
+      pix: 0,
+      cartao: 0,
+      dinheiro: 0,
+      pedidos: orders.length,
+    };
+
+    orders.forEach(order => {
+      const value = Math.max(0, (order.total || 0) - (order.taxaEntrega || 0));
+      summary.total += value;
+      if ((order.entrega && order.entrega.tipo === 'delivery') || order.entrega === 'delivery') summary.delivery += value;
+      else summary.retirada += value;
+
+      const payment = order.pagamento?.tipo || order.pagamento || order.formaPagamento;
+      if (payment === 'pix') summary.pix += value;
+      else if (payment === 'dinheiro') summary.dinheiro += value;
+      else summary.cartao += value;
+    });
+
+    const notasEntrada = (dataCache.notas || []).filter(nota => nota.tipo === 'entrada');
+    summary.comprasImportadas = notasEntrada.reduce((sum, nota) => sum + ((nota.items || []).reduce((acc, item) => acc + (item.valorTotal || 0), 0)), 0);
+    summary.notasEntrada = notasEntrada.length;
+
+    return summary;
+  }
+
+  function renderAutomaticSection() {
+    const summary = getAutomaticRevenueSummary();
+    return `
+      <section class="finance-grid finance-grid--top">
+        <article class="finance-card">
+          <div class="finance-card__header">
+            <h3 class="finance-card__title">Entradas Automaticas</h3>
+            <span class="finance-card__tag">${summary.pedidos} pedido(s)</span>
+          </div>
+          <div class="finance-auto-grid">
+            <div><span>Receita automatica</span><strong>${Utils.formatBRL(summary.total)}</strong></div>
+            <div><span>Retirada / balcão</span><strong>${Utils.formatBRL(summary.retirada)}</strong></div>
+            <div><span>Delivery</span><strong>${Utils.formatBRL(summary.delivery)}</strong></div>
+            <div><span>PIX</span><strong>${Utils.formatBRL(summary.pix)}</strong></div>
+            <div><span>Cartao</span><strong>${Utils.formatBRL(summary.cartao)}</strong></div>
+            <div><span>Dinheiro</span><strong>${Utils.formatBRL(summary.dinheiro)}</strong></div>
+          </div>
+          <p class="finance-empty">PDV, checkout e pedidos integrados ja alimentam automaticamente a entrada de vendas do modulo.</p>
+        </article>
+        <article class="finance-card">
+          <div class="finance-card__header">
+            <h3 class="finance-card__title">Compras por Nota</h3>
+            <span class="finance-card__tag">${summary.notasEntrada} NF-e</span>
+          </div>
+          <div class="finance-auto-grid">
+            <div><span>Total importado via NF-e</span><strong>${Utils.formatBRL(summary.comprasImportadas || 0)}</strong></div>
+          </div>
+          <p class="finance-empty">Use "Importar NF-e XML" para jogar compra no estoque e no financeiro de uma vez.</p>
+        </article>
+      </section>
+    `;
+  }
+
   function renderKpi(label, value, helper) {
     return `
       <article class="finance-kpi">
@@ -691,6 +783,8 @@ const AdminFinanceiro = (() => {
         <div class="finance-toolbar__right">
           ${canEditFinancials() && currentStoreFilter !== 'todas'
             ? `
+              <button class="btn btn--ghost" type="button" data-finance-action="import-nfe">Importar NF-e XML</button>
+              <button class="btn btn--ghost" type="button" data-finance-action="batch-fixed">Cadastrar fixos do mes</button>
               <button class="btn btn--ghost" type="button" data-finance-action="add-variable">Novo custo variavel</button>
               <button class="btn btn--primary" type="button" data-finance-action="add-fixed">Novo custo fixo</button>
               <button class="btn btn--ghost" type="button" data-finance-action="close-period">Fechar mes</button>
@@ -913,6 +1007,10 @@ const AdminFinanceiro = (() => {
           openEntryModal('fixed');
         } else if (action === 'add-variable') {
           openEntryModal('variable');
+        } else if (action === 'import-nfe') {
+          openNFeImportModal();
+        } else if (action === 'batch-fixed') {
+          openFixedBatchModal();
         } else if (action === 'close-period') {
           await closePeriod(metrics);
         }
@@ -927,6 +1025,125 @@ const AdminFinanceiro = (() => {
         await render(currentStoreFilter);
       });
     });
+  }
+
+  function openFixedBatchModal() {
+    if (currentStoreFilter === 'todas') {
+      Toast.error('Selecione uma loja especifica para cadastrar custos fixos.');
+      return;
+    }
+    const body = `
+      <div class="finance-batch-list">
+        ${FinanceEngine.FIXED_CATEGORIES.map(cat => `
+          <label class="finance-batch-row">
+            <span>${cat.label}${cat.mandatory ? ' *' : ''}</span>
+            <input class="finance-input js-batch-fixed" type="number" min="0" step="0.01" data-category="${cat.id}" placeholder="0.00">
+          </label>
+        `).join('')}
+      </div>
+    `;
+
+    createModal('Cadastrar custos fixos do mes', body, async modal => {
+      const inputs = [...modal.querySelectorAll('.js-batch-fixed')];
+      const entries = inputs
+        .map(input => ({
+          categoria: input.dataset.category,
+          valor: parseFloat(input.value) || 0,
+        }))
+        .filter(item => item.valor > 0);
+
+      if (!entries.length) {
+        Toast.error('Informe pelo menos um custo fixo.');
+        return false;
+      }
+
+      for (const item of entries) {
+        const category = FinanceEngine.FIXED_CATEGORY_MAP[item.categoria];
+        await persistEntry('fixed', {
+          id: Utils.generateId(),
+          storeId: currentStoreFilter,
+          periodKey: currentPeriod,
+          categoria: item.categoria,
+          descricao: category ? category.label : item.categoria,
+          valor: item.valor,
+          dueDay: null,
+          notes: 'Cadastro rapido mensal',
+          mandatory: !!category?.mandatory,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      Toast.success('Custos fixos cadastrados.');
+      await render(currentStoreFilter);
+      return true;
+    });
+  }
+
+  function openNFeImportModal() {
+    if (currentStoreFilter === 'todas') {
+      Toast.error('Selecione uma loja especifica para importar uma NF-e.');
+      return;
+    }
+    const body = `
+      <div class="finance-field finance-field--full">
+        <label>Arquivo XML da NF-e</label>
+        <input class="finance-input js-nfe-file" type="file" accept=".xml,text/xml,application/xml">
+      </div>
+      <div class="finance-field finance-field--full">
+        <label>Ou cole o XML aqui</label>
+        <textarea class="finance-input js-nfe-xml" rows="10" placeholder="<nfeProc>..."></textarea>
+      </div>
+      <p class="finance-empty">Melhor caminho no celular: baixe o XML da nota ou compartilhe para o navegador e importe aqui. Isso atualiza estoque e cria a saída de compra automaticamente.</p>
+    `;
+
+    createModal('Importar NF-e XML', body, async modal => {
+      let xml = modal.querySelector('.js-nfe-xml').value.trim();
+      const file = modal.querySelector('.js-nfe-file').files[0];
+      if (!xml && file) {
+        xml = await file.text();
+      }
+      if (!xml) {
+        Toast.error('Selecione ou cole um XML de NF-e.');
+        return false;
+      }
+      await importNFeXml(xml);
+      await render(currentStoreFilter);
+      return true;
+    });
+  }
+
+  async function importNFeXml(xml) {
+    try {
+      let result = null;
+      if (typeof FirestoreService !== 'undefined' && FirestoreService.ready && FirestoreService.StockOps) {
+        result = await FirestoreService.StockOps.entradaFromNFe(currentStoreFilter, xml);
+      } else if (typeof FirestoreService !== 'undefined' && FirestoreService.parseNFeXML) {
+        const parsed = FirestoreService.parseNFeXML(xml);
+        result = { nfInfo: parsed.nfInfo, results: parsed.items };
+      } else {
+        throw new Error('Importacao de NF-e indisponivel no momento');
+      }
+
+      const totalNota = (result.results || []).reduce((sum, item) => sum + (item.valorTotal || 0), 0);
+      await persistEntry('variable', {
+        id: Utils.generateId(),
+        storeId: currentStoreFilter,
+        periodKey: currentPeriod,
+        categoria: 'compras_mercadoria',
+        descricao: `NF-e ${result.nfInfo.numero} - ${result.nfInfo.fornecedor || 'Fornecedor'}`,
+        valor: totalNota,
+        dueDay: null,
+        notes: `Importado por XML | Serie ${result.nfInfo.serie || '-'} | CNPJ ${result.nfInfo.cnpjFornecedor || '-'}`,
+        mandatory: true,
+        createdAt: new Date().toISOString(),
+        source: 'nfe_xml',
+      });
+
+      Toast.success(`NF-e ${result.nfInfo.numero} importada. Estoque e financeiro atualizados.`);
+    } catch (error) {
+      console.error('[Financeiro] Falha ao importar NF-e:', error);
+      Toast.error(`Erro ao importar NF-e: ${error.message}`);
+    }
   }
 
   function openEntryModal(entryType) {
@@ -1026,6 +1243,7 @@ const AdminFinanceiro = (() => {
     el.innerHTML = `
       ${renderHeader(metrics)}
       ${renderActionBar()}
+      ${renderAutomaticSection()}
       <section class="finance-insights">
         ${insights.map(item => `<article class="finance-insight">${item}</article>`).join('')}
       </section>

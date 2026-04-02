@@ -197,6 +197,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const StoreProducts = {
     async getForStore(storeId) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('produtos_ativos').get();
@@ -204,6 +205,7 @@ const FirestoreService = (() => {
     },
 
     async setActive(storeId, productId, active, extraData = {}) {
+      ensureStoreAccess(storeId);
       const ref = ensureDb()
         .collection('lojas').doc(storeId)
         .collection('produtos_ativos').doc(productId);
@@ -220,6 +222,7 @@ const FirestoreService = (() => {
     },
 
     async bulkActivate(storeId, productIds) {
+      ensureStoreAccess(storeId);
       const batch = ensureDb().batch();
       productIds.forEach(pid => {
         const ref = ensureDb()
@@ -231,6 +234,7 @@ const FirestoreService = (() => {
     },
 
     onSnapshot(storeId, callback) {
+      ensureStoreAccess(storeId);
       const unsub = ensureDb()
         .collection('lojas').doc(storeId)
         .collection('produtos_ativos')
@@ -249,6 +253,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Stock = {
     async getForStore(storeId) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('estoque').get();
@@ -256,6 +261,7 @@ const FirestoreService = (() => {
     },
 
     async getForProduct(storeId, productId) {
+      ensureStoreAccess(storeId);
       const doc = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('estoque').doc(productId).get();
@@ -263,6 +269,7 @@ const FirestoreService = (() => {
     },
 
     async setQty(storeId, productId, quantidade, estoqueMinimo) {
+      ensureStoreAccess(storeId);
       const data = cleanUndefined({
         productId,
         quantidade,
@@ -290,6 +297,7 @@ const FirestoreService = (() => {
     },
 
     onSnapshot(storeId, callback) {
+      ensureStoreAccess(storeId);
       const unsub = ensureDb()
         .collection('lojas').doc(storeId)
         .collection('estoque')
@@ -307,6 +315,7 @@ const FirestoreService = (() => {
   ------------------------------------------ */
   const Movements = {
     async add(storeId, movement) {
+      ensureStoreAccess(storeId);
       const d = ensureDb();
       const ref = d.collection('lojas').doc(storeId).collection('movimentacoes').doc();
       const data = cleanUndefined({
@@ -322,6 +331,7 @@ const FirestoreService = (() => {
     },
 
     async getForStore(storeId, limit = 100) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('movimentacoes')
@@ -332,6 +342,7 @@ const FirestoreService = (() => {
     },
 
     async getForProduct(storeId, productId, limit = 50) {
+      ensureStoreAccess(storeId);
       const snap = await ensureDb()
         .collection('lojas').doc(storeId)
         .collection('movimentacoes')

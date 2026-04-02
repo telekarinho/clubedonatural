@@ -30,6 +30,11 @@ const AdminPedidos = (() => {
   let audioCtx = null;
   let lastOrderCount = 0;
   let pollInterval = null;
+  let _cachedOrders = null;
+
+  function useFirestore() {
+    return typeof FirestoreService !== 'undefined' && FirestoreService.ready;
+  }
 
   /* ------------------------------------------
      INIT
@@ -38,121 +43,32 @@ const AdminPedidos = (() => {
     // Nothing extra needed; render handles everything
   }
 
-  /* ------------------------------------------
-     MOCK DATA
-  ------------------------------------------ */
-  function ensureMockData() {
-    let orders = Storage.get('orders');
-    if (!orders || orders.length === 0) {
-      orders = generateMockOrders();
-      Storage.set('orders', orders);
-    }
-    return orders;
-  }
-
-  function generateMockOrders() {
-    const stores = ['centro', 'shopping', 'norte', 'sul', 'praia'];
-    const statuses = ['novo', 'preparando', 'pronto', 'entrega', 'entregue', 'cancelado'];
-    const pagamentos = ['pix', 'credito', 'debito', 'dinheiro'];
-    const tiposEntrega = ['retirada', 'delivery'];
-    const nomes = [
-      'Fernanda Lima', 'João Mendes', 'Camila Torres', 'Rafael Costa',
-      'Beatriz Oliveira', 'Marcelo Santos', 'Larissa Rocha', 'André Ferreira',
-      'Patrícia Alves', 'Bruno Cardoso', 'Julia Nascimento', 'Diego Souza',
-      'Carolina Martins', 'Thiago Barbosa', 'Amanda Pereira', 'Lucas Ribeiro',
-    ];
-    const enderecos = [
-      'Rua das Flores, 150 - Centro',
-      'Av. Paulista, 1200 - Apto 42',
-      'Rua Augusta, 500 - Consolação',
-      'Av. Brasil, 3000 - Jardim América',
-      'Rua Oscar Freire, 800',
-      'Av. Faria Lima, 2500 - Pinheiros',
-    ];
-
-    const orders = [];
-    const now = new Date();
-
-    for (let i = 0; i < 50; i++) {
-      const minutesAgo = Math.floor(Math.random() * 10080); // up to 7 days
-      const date = new Date(now.getTime() - minutesAgo * 60000);
-
-      const numItems = Math.floor(Math.random() * 4) + 1;
-      const items = [];
-      const usedProducts = new Set();
-
-      for (let j = 0; j < numItems; j++) {
-        let product;
-        do {
-          product = DataProducts[Math.floor(Math.random() * DataProducts.length)];
-        } while (usedProducts.has(product.id));
-        usedProducts.add(product.id);
-
-        const variacao = product.variacoes[Math.floor(Math.random() * product.variacoes.length)];
-        const qty = Math.floor(Math.random() * 3) + 1;
-        items.push({
-          productId: product.id,
-          nome: product.nome,
-          peso: variacao.peso,
-          preco: variacao.preco,
-          quantidade: qty,
-          recorrenciaElegivel: !!(product.recorrencia && product.recorrencia.elegivel),
-          descontoRecorrencia: product.recorrencia ? product.recorrencia.descontoPercent : 0,
-        });
+  async function loadOrders() {
+    if (useFirestore()) {
+      try {
+        if (currentStoreFilter && currentStoreFilter !== 'todas') {
+          _cachedOrders = await FirestoreService.Orders.getForStore(currentStoreFilter);
+        } else {
+          _cachedOrders = await FirestoreService.Orders.getAll();
+        }
+        if (_cachedOrders.length > 0) return;
+      } catch (e) {
+        console.warn('[Pedidos] Firestore load failed:', e.message);
       }
-
-      const subtotal = items.reduce((s, it) => s + it.preco * it.quantidade, 0);
-      const entrega = tiposEntrega[Math.floor(Math.random() * tiposEntrega.length)];
-      const taxaEntrega = entrega === 'delivery' ? [0, 5.99, 9.99][Math.floor(Math.random() * 3)] : 0;
-      const nome = nomes[Math.floor(Math.random() * nomes.length)];
-
-      // Older orders more likely to be entregue
-      let status;
-      if (minutesAgo < 30) status = 'novo';
-      else if (minutesAgo < 120) status = statuses[Math.floor(Math.random() * 3)]; // novo/preparando/pronto
-      else if (minutesAgo < 1440) status = statuses[Math.floor(Math.random() * 5)];
-      else status = Math.random() > 0.1 ? 'entregue' : 'cancelado';
-
-      orders.push({
-        id: `ped-${Utils.generateId()}`,
-        numero: Utils.generateOrderNumber(),
-        data: date.toISOString(),
-        cliente: {
-          nome,
-          celular: `(11) 9${Math.floor(Math.random() * 9000 + 1000)}-${Math.floor(Math.random() * 9000 + 1000)}`,
-          endereco: enderecos[Math.floor(Math.random() * enderecos.length)],
-          email: nome.toLowerCase().replace(/\s+/g, '.').normalize('NFD').replace(/[\u0300-\u036f]/g, '') + '@email.com',
-        },
-        loja: stores[Math.floor(Math.random() * stores.length)],
-        items,
-        subtotal,
-        taxaEntrega,
-        total: subtotal + taxaEntrega,
-        pagamento: pagamentos[Math.floor(Math.random() * pagamentos.length)],
-        status,
-        entrega,
-        observacoes: Math.random() > 0.7 ? 'Sem embalagem plástica, por favor.' : '',
-      });
     }
-
-    orders.sort((a, b) => new Date(b.data) - new Date(a.data));
-    return orders;
+    _cachedOrders = null; // Will use localStorage fallback
   }
 
   /* ------------------------------------------
      DATA HELPERS
   ------------------------------------------ */
   function getOrders() {
-    let orders = Storage.get('orders') || ensureMockData();
+    let orders = _cachedOrders || Storage.get('orders') || [];
 
-    // Normalize status aliases
-    orders = orders.map(o => ({
-      ...o,
-      status: STATUS_ALIAS[o.status] || o.status,
-    }));
+    orders = orders.map(normalizeOrder);
 
-    // Store filter
-    if (currentStoreFilter && currentStoreFilter !== 'todas') {
+    // Store filter (only if not already filtered by Firestore query)
+    if (!_cachedOrders && currentStoreFilter && currentStoreFilter !== 'todas') {
       orders = orders.filter(o => o.loja === currentStoreFilter);
     }
 
@@ -204,6 +120,41 @@ const AdminPedidos = (() => {
   function getStoreLabel(lojaId) {
     const store = DataStores.find(s => s.id === lojaId);
     return store ? store.nome.split(' - ')[1] || store.nome : lojaId;
+  }
+
+  function normalizeOrder(order) {
+    const rawItems = Array.isArray(order.items) ? order.items : (Array.isArray(order.itens) ? order.itens : []);
+    const items = rawItems.map(it => ({
+      ...it,
+      quantidade: Number(it.quantidade || it.qty || 1),
+      preco: Number(it.preco || it.precoUnit || it.price || 0),
+      peso: it.peso || it.variacao || '',
+      productId: it.productId || it.produtoId || null,
+    }));
+
+    const rawClient = typeof order.cliente === 'object' && order.cliente !== null
+      ? order.cliente
+      : { nome: order.cliente || order.clienteNome || 'Consumidor Final' };
+
+    return {
+      ...order,
+      numero: order.numero || order.id || order._id || 'SEM-ID',
+      cliente: {
+        nome: rawClient.nome || 'Consumidor Final',
+        celular: rawClient.celular || rawClient.telefone || '',
+        endereco: rawClient.endereco || '',
+        email: rawClient.email || '',
+      },
+      items,
+      subtotal: Number(order.subtotal != null ? order.subtotal : order.total || 0),
+      total: Number(order.total || 0),
+      pagamento: order.pagamento || order.formaPagamento || 'pix',
+      entrega: order.entrega || 'retirada',
+      taxaEntrega: Number(order.taxaEntrega || 0),
+      status: STATUS_ALIAS[order.status] || order.status || 'entregue',
+      loja: order.loja || null,
+      observacoes: order.observacoes || '',
+    };
   }
 
   /* ------------------------------------------
@@ -283,16 +234,29 @@ const AdminPedidos = (() => {
     doChangeStatus(orders, orderIdx, newStatus);
   }
 
-  function doChangeStatus(orders, orderIdx, newStatus) {
-    orders[orderIdx].status = newStatus;
+  async function doChangeStatus(orders, orderIdx, newStatus) {
+    const order = orders[orderIdx];
+    order.status = newStatus;
     if (newStatus === 'entregue') {
-      orders[orderIdx].dataEntrega = new Date().toISOString();
+      order.dataEntrega = new Date().toISOString();
     }
+
+    // Save to Firestore if available
+    if (useFirestore() && order.loja) {
+      try {
+        await FirestoreService.Orders.updateStatus(order.loja, order.id || order._id, newStatus);
+      } catch (e) {
+        console.warn('[Pedidos] Firestore status update failed:', e.message);
+      }
+    }
+
+    // Always save to localStorage too
     Storage.set('orders', orders);
 
     if (typeof AdminApp !== 'undefined') AdminApp.updatePedidosBadge();
     render(currentStoreFilter);
-    Toast.success(`Pedido ${orders[orderIdx].numero} → ${getStatusLabel(newStatus)}`);
+    const normalizedOrder = normalizeOrder(order);
+    Toast.success(`Pedido ${normalizedOrder.numero} → ${getStatusLabel(newStatus)}`);
   }
 
   /* ------------------------------------------
@@ -397,8 +361,8 @@ const AdminPedidos = (() => {
      ORDER DETAIL MODAL
   ------------------------------------------ */
   function showOrderModal(orderId) {
-    const orders = Storage.get('orders') || [];
-    const order = orders.find(o => o.id === orderId);
+    const orders = getOrders();
+    const order = orders.find(o => o.id === orderId || o._id === orderId);
     if (!order) return;
 
     const normalizedStatus = STATUS_ALIAS[order.status] || order.status;
@@ -642,12 +606,13 @@ const AdminPedidos = (() => {
   /* ------------------------------------------
      RENDER
   ------------------------------------------ */
-  function render(storeFilter) {
+  async function render(storeFilter) {
     const el = container();
     if (!el) return;
 
     currentStoreFilter = storeFilter || 'todas';
-    ensureMockData();
+
+    await loadOrders();
 
     const orders = getOrders();
 

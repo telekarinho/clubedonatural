@@ -32,9 +32,9 @@ service cloud.firestore {
 
     // Global subscriptions — public checkout can create
     match /assinaturas/{subId} {
-      allow read: if request.auth != null && isApproved();
+      allow read: if isAdmin() || canAccessStore(resource.data.loja);
       allow create: if true;
-      allow update, delete: if isAdmin() || isGerente();
+      allow update, delete: if isAdmin() || isGerenteOfStore(resource.data.loja);
     }
 
     // Global employees (dono-level, no store)
@@ -56,13 +56,13 @@ service cloud.firestore {
 
       // Per-store stock
       match /estoque/{productId} {
-        allow read: if request.auth != null && isApproved();
+        allow read: if canAccessStore(storeId);
         allow write: if isAdmin() || isGerenteOfStore(storeId) || isEstoquistaOfStore(storeId);
       }
 
       // Per-store stock movements
       match /movimentacoes/{movId} {
-        allow read: if request.auth != null && isApproved();
+        allow read: if canAccessStore(storeId);
         allow create: if isAdmin() || isGerenteOfStore(storeId) || isEstoquistaOfStore(storeId);
         allow update, delete: if isAdmin();
       }
@@ -75,7 +75,7 @@ service cloud.firestore {
 
       // Per-store orders — public checkout can create
       match /pedidos/{pedidoId} {
-        allow read: if request.auth != null && isApproved();
+        allow read: if canAccessStore(storeId);
         allow create: if true;
         allow update: if isAdmin() || isGerenteOfStore(storeId) || isWorkerOfStore(storeId);
         allow delete: if isAdmin();
@@ -197,6 +197,14 @@ service cloud.firestore {
       return request.auth != null
         && getUserData().approved == true
         && getUserData().storeId == storeId;
+    }
+
+    function canAccessStore(storeId) {
+      return request.auth != null
+        && (
+          isAdmin()
+          || (getUserData().approved == true && getUserData().storeId == storeId)
+        );
     }
   }
 }

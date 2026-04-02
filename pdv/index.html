@@ -1665,15 +1665,23 @@ async function finalizeSale() {
   const total = getTotal();
   const cashReceived = selectedPayment === 'dinheiro' ? (parseFloat(document.getElementById('cashReceived').value) || 0) : null;
   const change = cashReceived !== null ? cashReceived - total : null;
+  const customerName = document.getElementById('customerInput').value.trim();
 
   const sale = {
     id: orderNumber,
+    numero: orderNumber,
     data: now,
     dataLocal: today(),
     loja: currentStoreId || DEFAULT_STORE_ID,
     lojaNome: currentStore ? currentStore.nome : null,
     operador: currentUser.nome,
-    cliente: document.getElementById('customerInput').value.trim() || null,
+    cliente: {
+      nome: customerName || 'Consumidor Final',
+      celular: '',
+      endereco: '',
+      email: '',
+    },
+    clienteNome: customerName || null,
     itens: cart.map(c => ({
       productId: c.productId,
       nome: c.nome,
@@ -1682,9 +1690,21 @@ async function finalizeSale() {
       qty: c.qty,
       total: c.precoUnit * c.qty,
     })),
+    items: cart.map(c => ({
+      productId: c.productId,
+      nome: c.nome,
+      peso: c.variacao,
+      preco: c.precoUnit,
+      quantidade: c.qty,
+      total: c.precoUnit * c.qty,
+    })),
     subtotal,
     desconto: discount,
     total,
+    pagamento: selectedPayment,
+    status: 'entregue',
+    entrega: 'retirada',
+    taxaEntrega: 0,
     formaPagamento: selectedPayment,
     valorRecebido: cashReceived,
     troco: change,
@@ -1736,7 +1756,7 @@ function showReceipt(sale) {
       <span><strong>Pedido:</strong> ${sale.id}</span>
       <span><strong>Data:</strong> ${fmtDate(sale.data)}</span>
       <span><strong>Operador:</strong> ${sale.operador}</span>
-      ${sale.cliente ? `<span><strong>Cliente:</strong> ${sale.cliente}</span>` : ''}
+      ${(sale.cliente && sale.cliente.nome) ? `<span><strong>Cliente:</strong> ${sale.cliente.nome}</span>` : ''}
     </div>
     <table class="receipt-items-table">
       <thead><tr><th>Qtd</th><th>Item</th><th class="r-price">Unit.</th><th class="r-total">Total</th></tr></thead>
